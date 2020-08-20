@@ -1,0 +1,23 @@
+{
+    "name": "igor/news_portal",
+    "description": "news portal",
+    "authors": [
+        {
+            "name": "Igor Petrenko",
+            "email": "igor06.03.1995@gmail.com"
+        }
+    ],
+    "require": {
+        "vlucas/phpdotenv": "^5.1",
+        "psr/log": "^1.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "NewsPortal\\Models\\": "models/",
+            "NewsPortal\\Utils\\": "utils"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.3"
+    }
+}
