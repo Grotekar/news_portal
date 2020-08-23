@@ -9,12 +9,13 @@
     ],
     "require": {
         "vlucas/phpdotenv": "^5.1",
-        "psr/log": "^1.1"
+        "psr/log": "^1.1",
+        "ext-pdo": "*"
     },
     "autoload": {
         "psr-4": {
-            "NewsPortal\\Models\\": "models/",
-            "NewsPortal\\Utils\\": "utils"
+            "Models\\": "models/",
+            "Utils\\": "utils/"
         }
     },
     "require-dev": {
