@@ -24,30 +24,30 @@
 Создать базу данных и внести соответствующее нзвание в файл `.env`.
 
 ## 4. Функциональные возможности
-- Пользователь может запустить скрипт [public/index.php](https://github.com/Grotekar/news_portal/public/index.php)
+- Пользователь может запустить скрипт [public/index.php](https://github.com/Grotekar/news_portal/blob/master/public/index.php)
 с аргументом **--migrate**, либо **-m**, чтобы применить все миграции к локальной
 базе данных и создать всю нужную структуру для неё.
-- Пользователь может запустить скрипт [public/index.php](https://github.com/Grotekar/news_portal/public/index.php)
+- Пользователь может запустить скрипт [public/index.php](https://github.com/Grotekar/news_portal/blob/master/public/index.php)
 с аргументом **--help**, либо **-h**, чтобы узнать список возможных аргументов.
 
 ## 5. Тестирование
 
 ## 6. Описание файлов
 
-### [models/Database.php](https://github.com/Grotekar/news_portal/models/Database.php)
+### [models/Database.php](https://github.com/Grotekar/news_portal/blob/master/models/Database.php)
 Класс, описывающий метод подключения к базе данных.
 
-### [models/Migration.php](https://github.com/Grotekar/news_portal/models/Migration.php)
+### [models/Migration.php](https://github.com/Grotekar/news_portal/blob/master/models/Migration.php)
 Класс, описывающий методы осуществляющие миграции.
 
-### [public/index.php](https://github.com/Grotekar/news_portal/public/index.php)
+### [public/index.php](https://github.com/Grotekar/news_portal/blob/master/public/index.php)
 Точка входа в управление порталом.
 
-### [migrations](https://github.com/Grotekar/news_portal/migrations)
+### [migrations](https://github.com/Grotekar/news_portal/blob/master/migrations)
 Каталог, содержащий миграции базы данных.
 
-### [utils/Logger.php](https://github.com/Grotekar/news_portal/utils/Logger.php)
+### [utils/Logger.php](https://github.com/Grotekar/news_portal/blob/master/utils/Logger.php)
 Класс, содержащий реализацию логирования.
 
-### [.env.example](https://github.com/Grotekar/news_portal/.env.example)
+### [.env.example](https://github.com/Grotekar/news_portal/blob/master/.env.example)
 Шаблон для конфигурационного файла.
