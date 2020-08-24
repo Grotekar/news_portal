@@ -1,6 +1,6 @@
 <?php
 
-namespace NewsPortal\Utils;
+namespace Utils;
 
 use Psr\Log\AbstractLogger;
 
