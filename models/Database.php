@@ -7,6 +7,9 @@ use Utils\Logger;
 use Dotenv\Dotenv;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Класс для осуществления подключения к базе данных 
+ */
 class Database
 {
     private LoggerInterface $logger;
@@ -17,6 +20,9 @@ class Database
         $this->logger = new Logger();
     }
 
+    /**
+     * @return PDO
+     */
     public function getConnect()
     {
         // Подключение конфигурационного файла

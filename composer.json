@@ -15,7 +15,8 @@
     "autoload": {
         "psr-4": {
             "Models\\": "models/",
-            "Utils\\": "utils/"
+            "Utils\\": "utils/",
+            "Api\\": "api/"
         }
     },
     "require-dev": {

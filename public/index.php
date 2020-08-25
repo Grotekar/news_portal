@@ -4,7 +4,6 @@ namespace Models;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Написать тест на проверку подключения к БД
 $argv = $_SERVER['argv'];
 
 if (in_array('--migrate', $argv) === true || in_array('-m', $argv) === true) {

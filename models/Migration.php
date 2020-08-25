@@ -6,6 +6,9 @@ use PDO;
 use Utils\Logger;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Класс описывает механизм миграции
+ */
 class Migration
 {
     private LoggerInterface $logger;
@@ -20,8 +23,10 @@ class Migration
      * Выполнить миграции, которые отсутствуют в таблице migrations
      *
      * @param PDO $pdo
+     * 
+     * @return void
      */
-    public function migrate(PDO $pdo)
+    public function migrate(PDO $pdo): void
     {
         $this->pdo = $pdo;
         $migrationsInTable = $this->getMigrations($this->pdo);
@@ -55,20 +60,6 @@ class Migration
     private function getMigrations(): array
     {
         $migrations = [];
-        
-        // Создать таблицу migrations, если не существует
-        /* $query = "SHOW TABLES LIKE 'migrations'";
-        $statment = $this->pdo->prepare($query);
-        $isSuccess = $statment->execute();
-
-        if ($isSuccess === false) {
-            $zeroMigration = '00000_create_migrations_table.sql';
-            $query = file_get_contents(__DIR__ . '/../migrations/' . $zeroMigration);
-            $statment = $this->pdo->prepare($query);
-            $statment->execute();
-            $this->logger->info('Создана таблица migrations.');
-            $this->recordInTableMigrations($zeroMigration);
-        } */
         
         // Запрос к таблице
         $query = "SELECT name FROM migrations";
