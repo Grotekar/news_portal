@@ -29,10 +29,33 @@
 базе данных и создать всю нужную структуру для неё.
 - Пользователь может запустить скрипт [public/index.php](https://github.com/Grotekar/news_portal/blob/master/public/index.php)
 с аргументом **--help**, либо **-h**, чтобы узнать список возможных аргументов.
+- Руководствуясь примерами запросов в папке [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
+можно составлять запросы к таблицам базы данных. sh-скрипты покрывают всевозможные cURL-запросы.
 
 ## 5. Тестирование
 
+Папка [testDump](https://github.com/Grotekar/news_portal/blob/master/testDump)
+содержит файлы-миграции для заполнения базы данных тестовыми данными.
+
+Чтобы выполнить эти миграции необходимо запустить скрипт [testDump/makeMigrations](https://github.com/Grotekar/news_portal/blob/master/testDump/makeMigrations).
+
 ## 6. Описание файлов
+
+### [api/users/index.php](https://github.com/Grotekar/news_portal/blob/master/api/users/index.php)
+Точка входа для запросов к таблице users.
+
+Поддерживает запросы:
+* GET: получить все строки таблицы **users**, получить строку таблицы **users** по **user_id**;
+* POST: создать строку в таблицу **users**;
+* PUT: обновить строку таблицы **users** по **user_id**;
+* DELETE: удалить строку таблицы **users** по **user_id**.
+
+
+### [api/User.php](https://github.com/Grotekar/news_portal/blob/master/api/User.php)
+Класс содержит реализацию API-запросов к таблице **users**.
+
+### [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
+Папка содержит примеры cURL-запросов к API.
 
 ### [models/Database.php](https://github.com/Grotekar/news_portal/blob/master/models/Database.php)
 Класс, описывающий метод подключения к базе данных.
