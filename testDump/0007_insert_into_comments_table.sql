@@ -1,0 +1,4 @@
+INSERT INTO comments (`news_id`, `user_id`, `text`) VALUES
+(1, 1, 'Sed velit consequatur harum quasi ipsum voluptatem. Numquam et ea ea dignissimos maxime nam ut enim. Beatae odit asperiores commodi hic veniam voluptates. Porro molestiae eum sit.'),
+(1, 2, 'Impedit incidunt natus est. Beatae quo id aut omnis quia et. Provident ut autem ut et aliquam suscipit animi commodi.');
+(3, 4, 'Quis repudiandae laudantium aliquam et commodi et non. Laboriosam dolorem totam dolor velit repellat. Exercitationem sapiente numquam dolorem. Adipisci quia est sapiente nemo quam harum nemo placeat iusto. Laborum quia et vel. Optio autem corrupti assumenda atque velit beatae.');
