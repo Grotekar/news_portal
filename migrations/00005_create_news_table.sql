@@ -12,5 +12,5 @@ create table if not exists `news` (
 )
 engine = innodb
 auto_increment = 1
-character set utf8mb4
+default charset utf8mb4
 collate utf8mb4_unicode_ci;
