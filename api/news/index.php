@@ -4,33 +4,34 @@ namespace Models;
 namespace Api;
 
 use Models\Database as Database;
-use Api\User as User;
+use Api\News as News;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 $database = new Database();
 $pdo = $database->getConnect();
 
-$users = new User($pdo);
+$news = new News($pdo);
 
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $response = $users->getRequest();
+        $response = $news->getRequest();
         break;
     case 'POST':
-        $response = $users->createElement();
+        $response = $news->createElement();
         break;
     case 'PUT':
         parse_str(file_get_contents('php://input'), $putParams);
-        $response = $users->updateElement($putParams);
+        $response = $news->updateElement($putParams);
         break;
     case 'DELETE':
-        $response = $users->deleteElement();
+        $response = $news->deleteElement();
         break;
-    
     default:
-        $response = ['message_error' => 'Разрешенеы запросы только GET, POST, PUT и DELETE'];
+        $response = [
+            'message_error' => 'Разрешенеы запросы только GET, POST, PUT и DELETE'
+        ];
         break;
 }
 print_r($response);

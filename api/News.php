@@ -10,10 +10,10 @@ use Psr\Log\LoggerInterface;
 /**
  * Класс для осуществления GET, POST, PUT и DELETE-запросов.
  */
-class User extends AbstractTable
+class News extends AbstractTable
 {
-    protected PDO $pdo;
-    protected string $tableName = 'users';
+    private PDO $pdo;
+    private string $tableName = 'news';
     protected LoggerInterface $logger;
     
     /**
@@ -32,7 +32,7 @@ class User extends AbstractTable
      */
     protected function getStatmentForAllElements(): object
     {
-        $query = "SELECT * FROM users";
+        $query = "SELECT * FROM news";
         $statment = $this->pdo->prepare($query);
         return $statment;
     }
@@ -44,9 +44,9 @@ class User extends AbstractTable
      */
     protected function getStatmentForGetElement(int $id): object
     {
-        $query = "SELECT * FROM users WHERE user_id=(:user_id)";
+        $query = "SELECT * FROM news WHERE news_id=(:news_id)";
         $statment = $this->pdo->prepare($query);
-        $statment->bindParam(":user_id", $id);
+        $statment->bindParam(":news_id", $id);
         return $statment;
     }
 
@@ -58,10 +58,11 @@ class User extends AbstractTable
     protected function isExistsParamsInArray(array $params): bool
     {
         if (
-            array_key_exists('firstname', $params) &&
-            array_key_exists('lastname', $params) &&
-            array_key_exists('avatar', $params) &&
-            array_key_exists('is_admin', $params)
+            array_key_exists('article', $params) &&
+            array_key_exists('author_id', $params) &&
+            array_key_exists('category_id', $params) &&
+            array_key_exists('content', $params) &&
+            array_key_exists('main_image', $params)
         ) {
             return true;
         } else {
@@ -77,22 +78,22 @@ class User extends AbstractTable
     protected function getStatmentForCreateElement(): object
     {
         
-        $query = "INSERT INTO users (firstname, lastname, avatar, is_admin) 
-                VALUES (:firstname, :lastname, :avatar, :is_admin)";
+        $query = "INSERT INTO news (article, author_id, category_id, content, main_image) 
+                VALUES (:article, :author_id, :category_id, :content, :main_image)";
         $statment = $this->pdo->prepare($query);
 
-        $newPostParamFirstname = iconv('CP1251', 'UTF-8', $_POST['firstname']);
-        $newPostParamLastname = iconv('CP1251', 'UTF-8', $_POST['lastname']);
+        $newPostParamArticle = iconv('CP1251', 'UTF-8', $_POST['article']);
+        $newPostParamContent = iconv('CP1251', 'UTF-8', $_POST['content']);
 
-        $statment->bindParam(':firstname', $newPutParamFirstname);
-        $statment->bindParam(':lastname', $newPutParamLastname);
-        $statment->bindParam(':avatar', $_POST['avatar']);
-        $statment->bindParam(':is_admin', $_POST['is_admin']);
+        $statment->bindParam(':article', $newPostParamArticle);
+        $statment->bindParam(':author_id', $_POST['author_id']);
+        $statment->bindParam(':category_id', $_POST['category_id']);
+        $statment->bindParam(':content', $newPostParamContent);
+        $statment->bindParam(':main_image', $_POST['main_image']);
 
         return $statment;
     }
 
-    
     /**
      * Запрос для обновления элемента
      *
@@ -103,20 +104,22 @@ class User extends AbstractTable
      */
     protected function getStatmentForUpdateElement(int $id, array $putParams): object
     {
-        $query = "UPDATE users SET
-                firstname = :firstname, lastname = :lastname, avatar = :avatar, is_admin = :is_admin
-                WHERE user_id = :user_id";
+        $query = "UPDATE news SET
+            article = :article, author_id = :author_id, category_id = :category_id, 
+            content = :content, main_image = :main_image
+            WHERE news_id = :news_id";
         $statment = $this->pdo->prepare($query);
+
+        $newPutParamArticle = iconv('CP1251', 'UTF-8', $putParams['article']);
+        $newPutParamContent = iconv('CP1251', 'UTF-8', $putParams['content']);
         
-        $newPutParamFirstname = iconv('CP1251', 'UTF-8', $putParams['firstname']);
-        $newPutParamLastname = iconv('CP1251', 'UTF-8', $putParams['lastname']);
-        
-        $statment->bindParam(':firstname', $newPutParamFirstname);
-        $statment->bindParam(':lastname', $newPutParamLastname);
-        $statment->bindParam(':avatar', $putParams['avatar']);
-        $statment->bindParam(':is_admin', $putParams['is_admin']);
-        $statment->bindParam(':user_id', $id);
-        
+        $statment->bindParam(':article', $newPutParamArticle);
+        $statment->bindParam(':author_id', $putParams['author_id']);
+        $statment->bindParam(':category_id', $putParams['category_id']);
+        $statment->bindParam(':content', $newPutParamContent);
+        $statment->bindParam(':main_image', $putParams['main_image']);
+        $statment->bindParam(':news_id', $id);
+
         return $statment;
     }
 
@@ -129,9 +132,9 @@ class User extends AbstractTable
      */
     protected function getStatmentForDeleteElement(int $id): object
     {
-        $query = "DELETE FROM users WHERE user_id = :user_id";
+        $query = "DELETE FROM news WHERE news_id = :news_id";
         $statment = $this->pdo->prepare($query);
-        $statment->bindParam(':user_id', $id);
+        $statment->bindParam(':news_id', $id);
 
         return $statment;
     }
@@ -141,6 +144,6 @@ class User extends AbstractTable
      */
     protected function getId(): int
     {
-        return (int) substr($_SERVER['REQUEST_URI'], 11);
+        return (int) substr($_SERVER['REQUEST_URI'], 10);
     }
 }
