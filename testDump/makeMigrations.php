@@ -13,7 +13,7 @@ foreach (glob(__DIR__ . "/*.sql") as $filename) {
 }
 
 $i = 1;
-$countMigrations = count(migrations);
+$countMigrations = count($migrations);
 $countSuccess = 0;
 $countBad = 0;
 

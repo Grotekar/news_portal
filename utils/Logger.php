@@ -7,7 +7,8 @@ use Psr\Log\AbstractLogger;
 class Logger extends AbstractLogger
 {
     /**
-     * Класс предназначен для логирования
+     * Реализация логирования
+     *
      * @param mixed $level
      * @param string $message
      * @param array $context
