@@ -29,30 +29,47 @@
 базе данных и создать всю нужную структуру для неё.
 - Пользователь может запустить скрипт [public/index.php](https://github.com/Grotekar/news_portal/blob/master/public/index.php)
 с аргументом **--help**, либо **-h**, чтобы узнать список возможных аргументов.
-- Руководствуясь примерами запросов в папке [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
-можно составлять запросы к таблицам базы данных. sh-скрипты покрывают всевозможные cURL-запросы.
+- Руководствуясь примерами запросов в каталоге [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
+можно составлять запросы к таблицам базы данных. sh-скрипты покрывают всевозможные cURL-запросы. Ответ выводится в JSON-формате.
 
 ## 5. Тестирование
 
 Папка [testDump](https://github.com/Grotekar/news_portal/blob/master/testDump)
 содержит файлы-миграции для заполнения базы данных тестовыми данными.
 
-Чтобы выполнить эти миграции необходимо запустить скрипт [testDump/makeMigrations](https://github.com/Grotekar/news_portal/blob/master/testDump/makeMigrations).
+Чтобы выполнить эти миграции необходимо запустить скрипт [testDump/makeMigrations.php](https://github.com/Grotekar/news_portal/blob/master/testDump/makeMigrations.php).
 
 ## 6. Описание файлов
 
 ### [api/users/index.php](https://github.com/Grotekar/news_portal/blob/master/api/users/index.php)
 Точка входа для запросов к таблице users.
 
-Поддерживает запросы:
+Поддерживаются запросы:
 * GET: получить все строки таблицы **users**, получить строку таблицы **users** по **user_id**;
 * POST: создать строку в таблицу **users**;
 * PUT: обновить строку таблицы **users** по **user_id**;
 * DELETE: удалить строку таблицы **users** по **user_id**.
 
-
 ### [api/User.php](https://github.com/Grotekar/news_portal/blob/master/api/User.php)
-Класс содержит реализацию API-запросов к таблице **users**.
+Класс содержит реализацию SQL-запросов к таблице **users**.
+
+### [api/news/index.php](https://github.com/Grotekar/news_portal/blob/master/api/news/index.php)
+Точка входа для запросов к таблице users.
+
+Поддерживаются запросы:
+* GET: получить все строки таблицы **news**, получить строку таблицы **news** по **user_id**;
+* POST: создать строку в таблицу **news**;
+* PUT: обновить строку таблицы **news** по **news_id**;
+* DELETE: удалить строку таблицы **news** по **news_id**.
+
+### [api/News.php](https://github.com/Grotekar/news_portal/blob/master/api/News.php)
+Класс содержит реализацию SQL-запросов к таблице **news**.
+
+### [api/AbstractTable.php](https://github.com/Grotekar/news_portal/blob/master/api/AbstractTable.php)
+Абсрактный класс содержит реализацию основных API-запросов (GET, POST, PUT и DELETE) ко всем таблицам.
+
+### [api/TableInterface.php](https://github.com/Grotekar/news_portal/blob/master/api/TableInterface.php)
+Содержит реализуемый интерфейс основных API-запросов (GET, POST, PUT и DELETE).
 
 ### [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
 Папка содержит примеры cURL-запросов к API.
@@ -64,10 +81,13 @@
 Класс, описывающий методы осуществляющие миграции.
 
 ### [public/index.php](https://github.com/Grotekar/news_portal/blob/master/public/index.php)
-Точка входа в управление порталом.
+Точка входа для осуществления миграций базы данных.
 
 ### [migrations](https://github.com/Grotekar/news_portal/blob/master/migrations)
-Каталог, содержащий миграции базы данных.
+Каталог содержит миграции базы данных.
+
+### [testDump](https://github.com/Grotekar/news_portal/blob/master/testDump)
+Каталог содержит файлы-миграции для заполнения базы данных тестовыми данными.
 
 ### [utils/Logger.php](https://github.com/Grotekar/news_portal/blob/master/utils/Logger.php)
 Класс, содержащий реализацию логирования.
