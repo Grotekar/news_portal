@@ -1,5 +1,5 @@
 # Новостной портал (news_portal)
-Здесь представен API для работы с новостным порталом, включая пример работы.
+Здесь представен REST API для работы с новостным порталом.
 
 ## 1. Требования
 * Версия PHP не ниже 7.4;
@@ -34,7 +34,7 @@
 
 ## 5. Тестирование
 
-Папка [testDump](https://github.com/Grotekar/news_portal/blob/master/testDump)
+Каталог [testDump](https://github.com/Grotekar/news_portal/blob/master/testDump)
 содержит файлы-миграции для заполнения базы данных тестовыми данными.
 
 Чтобы выполнить эти миграции необходимо запустить скрипт [testDump/makeMigrations.php](https://github.com/Grotekar/news_portal/blob/master/testDump/makeMigrations.php).
@@ -42,7 +42,7 @@
 ## 6. Описание файлов
 
 ### [api/users/index.php](https://github.com/Grotekar/news_portal/blob/master/api/users/index.php)
-Точка входа для запросов к таблице users.
+Точка входа для запросов к таблице **users**.
 
 Поддерживаются запросы:
 * GET: получить все строки таблицы **users**, получить строку таблицы **users** по **user_id**;
@@ -51,19 +51,48 @@
 * DELETE: удалить строку таблицы **users** по **user_id**.
 
 ### [api/User.php](https://github.com/Grotekar/news_portal/blob/master/api/User.php)
-Класс содержит реализацию SQL-запросов к таблице **users**.
+Класс подготавливает SQL-запросы к таблице **users**.
 
 ### [api/news/index.php](https://github.com/Grotekar/news_portal/blob/master/api/news/index.php)
-Точка входа для запросов к таблице users.
+Точка входа для запросов к таблице **news**.
 
 Поддерживаются запросы:
-* GET: получить все строки таблицы **news**, получить строку таблицы **news** по **user_id**;
+* GET: получить все строки таблицы **news**, получить строку таблицы **news** по **news_id** ;
 * POST: создать строку в таблицу **news**;
 * PUT: обновить строку таблицы **news** по **news_id**;
 * DELETE: удалить строку таблицы **news** по **news_id**.
 
 ### [api/News.php](https://github.com/Grotekar/news_portal/blob/master/api/News.php)
-Класс содержит реализацию SQL-запросов к таблице **news**.
+Класс подготавливает SQL-запросы к таблице **news**.
+
+Также подготавливает ответ для запроса, который получается с подстановкой идентификатора значением, например, вместо
+идентификатора категории будет получено название категории с родительской категорией. 
+
+Категория новости - последний элемент массива **categories**, потому что является дочерним.
+
+### [api/categories/index.php](https://github.com/Grotekar/news_portal/blob/master/api/categories/index.php)
+Точка входа для запросов к таблице **categories**.
+
+Поддерживаются запросы:
+* GET: получить все строки таблицы **categories**, получить строку таблицы **categories** по **category_id** ;
+* POST: создать строку в таблицу **categories**;
+* PUT: обновить строку таблицы **categories** по **category_id**;
+* DELETE: удалить строку таблицы **categories** по **category_id**.
+
+### [api/Category.php](https://github.com/Grotekar/news_portal/blob/master/api/Category.php)
+Класс подготавливает SQL-запросы к таблице **categories**.
+
+### [api/tags/index.php](https://github.com/Grotekar/news_portal/blob/master/api/tags/index.php)
+Точка входа для запросов к таблице **tags**.
+
+Поддерживаются запросы:
+* GET: получить все строки таблицы **tags**, получить строку таблицы **tags** по **tag_id** ;
+* POST: создать строку в таблицу **tags**;
+* PUT: обновить строку таблицы **tags** по **tag_id**;
+* DELETE: удалить строку таблицы **tags** по **tag_id**.
+
+### [api/Tag.php](https://github.com/Grotekar/news_portal/blob/master/api/Tag.php)
+Класс подготавливает SQL-запросы к таблице **tags**.
 
 ### [api/AbstractTable.php](https://github.com/Grotekar/news_portal/blob/master/api/AbstractTable.php)
 Абсрактный класс содержит реализацию основных API-запросов (GET, POST, PUT и DELETE) ко всем таблицам.
@@ -72,7 +101,7 @@
 Содержит реализуемый интерфейс основных API-запросов (GET, POST, PUT и DELETE).
 
 ### [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
-Папка содержит примеры cURL-запросов к API.
+Каталог содержит примеры cURL-запросов к API.
 
 ### [models/Database.php](https://github.com/Grotekar/news_portal/blob/master/models/Database.php)
 Класс, описывающий метод подключения к базе данных.
