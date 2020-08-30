@@ -1,6 +1,7 @@
 create table if not exists `news_has_tag` (
     `news_id` int(10) unsigned not null,
     `tag_id` int(10) unsigned not null,
+    primary key (news_id, tag_id),
     foreign key (news_id) references news (news_id),
     foreign key (tag_id) references tags (tag_id)
 )
