@@ -8,7 +8,7 @@ use Utils\Logger;
 use Psr\Log\LoggerInterface;
 
 /**
- * Класс для осуществления GET, POST, PUT и DELETE-запросов.
+ * Класс подготавливает SQL-запросы.
  */
 class News extends AbstractTable
 {
@@ -26,13 +26,174 @@ class News extends AbstractTable
     }
 
     /**
+     * Подготовка данных перед выдачей
+     *
+     * @return string
+     */
+    public function difficultGetRequest()
+    {
+        // Получение данных новостей
+        $preliminaryDataFromNews = $this->getRequest();
+        // Преобразование новостей к нужной форме для обработки
+        $listOfNewsArray = json_decode($preliminaryDataFromNews);
+        if (is_array($listOfNewsArray) === false) {
+            $listOfNewsArray = [$listOfNewsArray];
+        }
+        
+        // На основании данных новостей заменить id категории на название с учетом вложенности
+        $listOfNewsArray = $this->getCategories($listOfNewsArray);
+
+        // Получить теги новостей
+        $listOfNewsArray = $this->getTagsForNews($listOfNewsArray);
+
+        // Получить изображения к новости
+        $listOfNewsArray = $this->getImagesForNews($listOfNewsArray);
+
+        // Получение результата
+        $result = json_encode($listOfNewsArray);
+
+        return $result;
+    }
+
+    /**
+     * Получение категорий по списку новостей
+     *
+     * @param array $listOfNews
+     *
+     * @param array
+     */
+    private function getCategories(array $listOfNews)
+    {
+        // Получение категорий через API
+        $categories = new Category($this->pdo);
+        $listOfCategoriesJson = $categories->getRequest();
+        $listOfCategoriesArray = json_decode($listOfCategoriesJson);
+
+        // Для каждой новости...
+        foreach ($listOfNews as $key => $newsElement) {
+            // Найти соответствующую категорию в таблице
+            $parentCategoryId = null;
+            $categoriesOfNewsElement = null;
+            $categoryName = '';
+            
+            // Получить первую категорию с подкатегорией
+            for ($i = 0; $i < count($listOfCategoriesArray); $i++) {
+                if ($listOfCategoriesArray[$i]->category_id === $newsElement->category_id) {
+                    $categoryName = $listOfCategoriesArray[$i]->name;
+                    $categoriesOfNewsElement[] = $categoryName;
+                    $parentCategoryId = $listOfCategoriesArray[$i]->parent_category;
+                }
+            }
+
+            // Пока есть родительская, создавать вложенные категории
+            while ($parentCategoryId !== null) {
+                for ($i = 0; $i < count($listOfCategoriesArray); $i++) {
+                    if ($listOfCategoriesArray[$i]->category_id === $parentCategoryId) {
+                        // Запомнить имя найденной категории
+                        $parentCategoryName = $listOfCategoriesArray[$i]->name;
+                        // Поместить в начало массива
+                        array_unshift($categoriesOfNewsElement, $parentCategoryName);
+                        // Получить следующий id родительской новости
+                        $parentCategoryId = $listOfCategoriesArray[$i]->parent_category;
+                    }
+                }
+            }
+            // Удалить category_id новости, а вместо него поместить массив вложенных категорий
+            unset($newsElement->category_id);
+            $newsElement->categories = $categoriesOfNewsElement;
+        }
+
+        return $listOfNews;
+    }
+
+    /**
+     * Получение категорий по списку новостей
+     *
+     * @param array $listOfNews
+     *
+     * @param array
+     */
+    private function getTagsForNews(array $listOfNews)
+    {
+        
+        // Для каждой новости...
+        foreach ($listOfNews as $key => $newsElement) {
+            // Получить все тэги новости
+            $query = "SELECT tags.name FROM tags
+                        JOIN news_has_tag
+                            ON tags.tag_id = news_has_tag.tag_id
+                        WHERE news_has_tag.news_id = :news_id";
+            $statment = $this->pdo->prepare($query);
+            $statment->bindParam(':news_id', $newsElement->news_id);
+            $statment->execute();
+            
+            //Вывести все тэги в массиве
+            $tags = [];
+            
+            foreach ($statment->fetchAll(\PDO::FETCH_ASSOC) as $key => $tag) {
+                $tags[] = $tag['name'];
+            }
+
+            // Добавить массив тэгов
+            $newsElement->tags = $tags;
+        }
+
+        return $listOfNews;
+    }
+
+    
+    /**
+     * Получение категорий по списку новостей
+     *
+     * @param array $listOfNews
+     *
+     * @param array
+     */
+    private function getImagesForNews(array $listOfNews)
+    {
+        
+        // Для каждой новости...
+        foreach ($listOfNews as $key => $newsElement) {
+            // Получить все изображения к новости
+            $query = "SELECT image_id FROM images
+                        WHERE news_id = :news_id";
+            $statment = $this->pdo->prepare($query);
+            $statment->bindParam(':news_id', $newsElement->news_id);
+            $statment->execute();
+            
+            //Вывести все изображения в массиве
+            $images = [];
+            
+            foreach ($statment->fetchAll(\PDO::FETCH_ASSOC) as $key => $image) {
+                $images[] = $image['image_id'];
+            }
+
+            // Добавить массив изображений
+            $newsElement->images = $images;
+        }
+
+        return $listOfNews;
+    }
+
+    /**
      * Запрос для получения всех элементов
      *
      * @return object
      */
     protected function getStatmentForAllElements(): object
     {
-        $query = "SELECT * FROM news";
+        $query = "SELECT 
+                        n.news_id,
+                        n.article,
+                        n.created,
+                        u.firstname,
+                        u.lastname,
+                        n.category_id,
+                        n.content,
+                        n.main_image
+                FROM news n
+                    JOIN users u
+                        ON n.author_id = u.user_id";
         $statment = $this->pdo->prepare($query);
         return $statment;
     }
