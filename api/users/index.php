@@ -16,7 +16,7 @@ $users = new User($pdo);
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $response = $users->getRequest();
+        $response = $users->processinggetRequest();
         break;
     case 'POST':
         $response = $users->createElement();

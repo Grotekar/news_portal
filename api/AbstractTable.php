@@ -7,7 +7,9 @@ namespace Api;
  */
 abstract class AbstractTable implements TableInterface
 {
-    
+    protected $response;
+    protected $statment;
+
     /**
      * @param PDO $pdo
      */
@@ -16,13 +18,20 @@ abstract class AbstractTable implements TableInterface
         $this->logger = new Logger();
         $this->pdo = $pdo;
     }
+    
+    /**
+     * Подготовка данных перед выдачей
+     *
+     * @return string
+     */
+    //abstract public function processingGetRequest(): string;
 
     /**
      * Обработка GET-запроса.
      *
-     * @return string
+     * @return bool
      */
-    public function getRequest(): string
+    public function isGetRequestSuccess(): bool
     {
         header("Access-Control-Allow-Origin: *");
         header("Access-Control-Allow-Headers: access");
@@ -30,100 +39,92 @@ abstract class AbstractTable implements TableInterface
         header("Access-Control-Allow-Credentials: true");
         header("Content-Type: application/json");
 
-        $response = [];
+        $status = false;
 
         // Если нужно получить по id, либо всё
         if ($this->getId() > 0) {
-            $response = $this->getElement($this->getId());
+            $status = $this->isGetElement($this->getId());
         } else {
-            $response = $this->getAll();
+            $status = $this->isGetAll();
         }
 
-        return $response;
+        return $status;
     }
 
     /**
-     * @return string
+     * @return bool
      */
-    private function getAll(): string
+    public function isGetAll(): bool
     {
-        $response = [];
+        // Результат запроса к таблице
+        $status = $this->isGetAllComplited();
 
-        // Запрос к таблице
-        $statment = $this->getStatmentForAllElements();
-
-        $isSuccess = $statment->execute();
-
-        if ($isSuccess === false) {
+        if ($status === false) {
             $this->logger->error(
-                "The {tableNmae} table is empty or bad request.\n / 
+                "The {tableName} table is empty or bad request.\n / 
                 Таблица {tableName} пуста, либо запрос не верен. Сообщение от PDO: {errorInfo}.",
-                ['tableName' => $this->tableName, 'errorInfo' => $statment->errorInfo()[2]]
+                ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
             );
             
             http_response_code(400);
-            $response = json_encode([
+            $this->response = json_encode([
                 "message_error" => "Bad request. / Запрос не верен.",
-                "message_PDO" => $statment->errorInfo()[2]
+                "message_PDO" => $this->statment->errorInfo()[2]
             ], JSON_UNESCAPED_UNICODE);
         } else {
-            $this->logger->info(' The request was completed successfully. / Запрос выполнен успешно.');
+            $this->logger->info('The request was completed successfully. / Запрос выполнен успешно.');
             // Фиксация полученных данных
             http_response_code(200);
-            $response = json_encode($statment->fetchAll(\PDO::FETCH_ASSOC));
+            $this->response = json_encode($this->statment->fetchAll(\PDO::FETCH_ASSOC));
         }
 
-        return $response;
+        return $status;
     }
 
     /**
      * Запрос для получения всех элементов
      *
-     * @return object
+     * @return bool
      */
-    abstract protected function getStatmentForAllElements(): object;
+    abstract protected function isGetAllComplited(): bool;
 
     /**
      * @param int $id
      *
-     * @return string
+     * @return bool
      */
-    private function getElement(int $id): string
+    public function isGetElement(int $id): bool
     {
-        $response = [];
+        // Результат запроса к таблице        
+        $status = $this->isGetElementComplited($id);
         
-        // Запрос к таблице
-        $statment = $this->getStatmentForGetElement($id);
-        
-        $isSuccess = $statment->execute();
-        
-        if ($isSuccess === false) {
+        if ($status === false) {
             $this->logger->info(
                 "Not found.\n / Не найдено. Сообщение от PDO: {errorInfo}.",
-                ['errorInfo' => $statment->errorInfo()[2]]
+                ['errorInfo' => $this->statment->errorInfo()[2]]
             );
             
             http_response_code(404);
-            $response = json_encode([
+            $this->response = json_encode([
                 "message_error" => "Not found./ Не найдено.",
-                "message_PDO" => $statment->errorInfo()[2]
+                "message_PDO" => $this->statment->errorInfo()[2]
             ], JSON_UNESCAPED_UNICODE);
         } else {
             $this->logger->info(' The request was completed successfully. / Запрос выполнен успешно.');
             // Фиксация полученных данных
             http_response_code(200);
-            $response = json_encode($statment->fetch(\PDO::FETCH_ASSOC));
+            $this->response = json_encode($this->statment->fetch(\PDO::FETCH_ASSOC));
         }
 
-        return $response;
+        return $status;
     }
 
      /**
      * Запрос для получения элемента
      *
-     * @return object
+     * @return bool
      */
-    abstract protected function getStatmentForGetElement(int $id): object;
+    abstract public function isGetElementComplited(int $id): bool;
 
     /**
      * Обработка POST-запроса.
@@ -139,44 +140,41 @@ abstract class AbstractTable implements TableInterface
         header(
             "Access-Control-Allow-Headers:Content-Type,Access-Control-Allow-Headers,Authorization,X-Requested-With"
         );
-        
-        $response = [];
 
         // Проверка переданных переменных
         if ($this->isExistsParamsInArray($_POST)) {
-            // Запрос к таблице
-            $statment = $this->getStatmentForCreateElement();
-
-            $isSuccess = $statment->execute();
+            // Результат запроса к таблице
+            $status = $this->isCreateElementCompleted($_POST);
             
-            if ($isSuccess === false) {
+            if ($status === false) {
                 $this->logger->error(
                     'Bad request. / 
                     Не удалось выполнить запрос на добавление записи в таблицу {tableName}. 
                     Сообщение от PDO: {errorInfo}.',
-                    ['tableName' => $this->tableName, 'errorInfo' => $statment->errorInfo()[2]]
+                    ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
                 );
                 
                 http_response_code(400);
-                $response = json_encode([
+                $this->response = json_encode([
                     "message_error" => "Bad request. / Не удалось выполнить запрос на добавление записи в таблицу.",
-                    "message_PDO" => $statment->errorInfo()[2]
+                    "message_PDO" => $this->statment->errorInfo()[2]
                 ], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(201);
-                $response = json_encode([
+                $this->response = json_encode([
                     "message_success" => "The request was completed successfully. / 
                     Добавление записи в таблицу выполнено успешно."
                 ], JSON_UNESCAPED_UNICODE);
             }
         } else {
             http_response_code(400);
-            $response = json_encode([
+            $this->response = json_encode([
                 "message_error" => "Bad request or not enough data. / 
                 Не удалось выполнить запрос на добавление записи в таблицу. Неверные данные, либо их недостаточно."
             ], JSON_UNESCAPED_UNICODE);
         }
-        return $response;
+
+        return $status;
     }
 
     /**
@@ -189,9 +187,11 @@ abstract class AbstractTable implements TableInterface
     /**
      * Запрос на создание элемента
      *
-     * @return object
+     * @param array $postParams
+     *
+     * @return bool
      */
-    abstract protected function getStatmentForCreateElement(): object;
+    abstract public function isCreateElementCompleted(array $postParams): bool;
 
     /**
      * Обработка PUT-запроса
@@ -211,42 +211,40 @@ abstract class AbstractTable implements TableInterface
 
         // Получить идентификатор
         $id = $this->getId();
-        $response = [];
 
         if ($this->isExistsParamsInArray($putParams)) {
             // Запрос к таблице
-            $statment = $this->getStatmentForUpdateElement($id, $putParams);
-
-            $isSuccess = $statment->execute();
+            $status = $this->isUpdateElementCompleted($id, $putParams);
                         
-            if ($isSuccess === false) {
+            if ($status === false) {
                 $this->logger->error(
                     'Bad request. / 
                     Не удалось выполнить запрос на обновление записи в таблице {tableName}. 
                     Сообщение от PDO: {errorInfo}.',
-                    ['tableName' => $this->tableName, 'errorInfo' => $statment->errorInfo()[2]]
+                    ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
                 );
                 
                 http_response_code(304);
-                $response = json_encode([
+                $this->response = json_encode([
                     "message_error" => "Not modified. / Не удалось выполнить запрос на обновление записи в таблице.",
-                    "message_PDO" => $statment->errorInfo()[2]
+                    "message_PDO" => $this->statment->errorInfo()[2]
                 ], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(200);
-                $response = json_encode([
+                $this->response = json_encode([
                     "message_success" => "The request was completed successfully. / 
                     Обновление записи в таблице выполнено успешно."
                 ], JSON_UNESCAPED_UNICODE);
             }
         } else {
             http_response_code(400);
-            $response = json_encode([
+            $this->response = json_encode([
                 "message_error" => "Bad request or not enough data. / 
                 Не удалось выполнить запрос на обновление записи в таблице. Неверные данные, либо их недостаточно."
             ], JSON_UNESCAPED_UNICODE);
         }
-        return $response;
+
+        return $this->response;
     }
 
     /**
@@ -255,9 +253,9 @@ abstract class AbstractTable implements TableInterface
      * @param int $id
      * @param array $putParams - параметры запроса
      *
-     * @return object
+     * @return bool
      */
-    abstract protected function getStatmentForUpdateElement(int $id, array $putParams): object;
+    abstract public function isUpdateElementCompleted(int $id, array $putParams): bool;
 
     /**
      * Обработка DELETE-запроса
@@ -276,43 +274,40 @@ abstract class AbstractTable implements TableInterface
 
         // Получить идентификатор
         $id = $this->getId();
-        $response = [];
 
         if ($id > 0) {
             // Запрос к таблице
-            $statment = $this->getStatmentForDeleteElement($id);
-
-            $isSuccess = $statment->execute();
+            $status = $this->isDeleteteElementCompleted($id);
 
             if ($isSuccess === false) {
                 $this->logger->error(
                     'Bad request. / 
                     Не удалось выполнить запрос на удаление записи из таблицы {tableName}. 
                     Сообщение от PDO: {errorInfo}.',
-                    ['tableName' => $this->tableName, 'errorInfo' => $statment->errorInfo()[2]]
+                    ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
                 );
                 
                 http_response_code(204);
-                $response = json_encode([
+                $this->response = json_encode([
                     "message_error" => "No Content. / Не удалось выполнить запрос на удаление записи из таблицы.",
-                    "message_PDO" => $statment->errorInfo()[2]
+                    "message_PDO" => $this->statment->errorInfo()[2]
                 ], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(200);
-                $response = json_encode([
+                $this->response = json_encode([
                     "message_success" => "The request was completed successfully. 
                     / Удаление записи из таблицы выполнено успешно."
                 ], JSON_UNESCAPED_UNICODE);
             }
         } else {
             http_response_code(400);
-            $response = json_encode([
+            $this->response = json_encode([
                 "message_error" => "Bad request or not enough data. / 
                 Не удалось выполнить запрос на обновление записи в таблице. Неверные данные, либо их недостаточно."
             ], JSON_UNESCAPED_UNICODE);
         }
 
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -320,9 +315,9 @@ abstract class AbstractTable implements TableInterface
      *
      * @param int $id
      *
-     * @return object
+     * @return bool
      */
-    abstract protected function getStatmentForDeleteElement(int $id): object;
+    abstract public function isDeleteteElementCompleted(int $id): bool;
 
     /**
      * @return int

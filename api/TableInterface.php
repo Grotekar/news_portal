@@ -12,7 +12,7 @@ interface TableInterface
      *
      * @return string
      */
-    public function getRequest(): string;
+    public function processingGetRequest(): string;
 
     /**
      * Обработка POST-запроса.

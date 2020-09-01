@@ -8,7 +8,7 @@ use Utils\Logger;
 use Psr\Log\LoggerInterface;
 
 /**
- * Класс для осуществления GET, POST, PUT и DELETE-запросов.
+ * Класс подготавливает SQL-запросы.
  */
 class User extends AbstractTable
 {
@@ -28,26 +28,30 @@ class User extends AbstractTable
     /**
      * Запрос для получения всех элементов
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForAllElements(): object
+    public function isGetAllComplited(): bool
     {
         $query = "SELECT * FROM users";
-        $statment = $this->pdo->prepare($query);
-        return $statment;
+        $this->statment = $this->pdo->prepare($query);
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
      * Запрос для получения элемента
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForGetElement(int $id): object
+    public function isGetElementComplited(int $id): bool
     {
         $query = "SELECT * FROM users WHERE user_id=(:user_id)";
-        $statment = $this->pdo->prepare($query);
-        $statment->bindParam(":user_id", $id);
-        return $statment;
+        $this->statment = $this->pdo->prepare($query);
+        $this->statment->bindParam(":user_id", $id);
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
@@ -72,24 +76,27 @@ class User extends AbstractTable
     /**
      * Запрос на создание элемента
      *
-     * @return object
+     * @param array $postParams
+     *
+     * @return bool
      */
-    protected function getStatmentForCreateElement(): object
-    {
-        
+    public function isCreateElementCompleted(array $postParams): bool
+    {        
         $query = "INSERT INTO users (firstname, lastname, avatar, is_admin) 
                 VALUES (:firstname, :lastname, :avatar, :is_admin)";
-        $statment = $this->pdo->prepare($query);
+        $this->statment = $this->pdo->prepare($query);
 
-        $newPostParamFirstname = iconv('CP1251', 'UTF-8', $_POST['firstname']);
-        $newPostParamLastname = iconv('CP1251', 'UTF-8', $_POST['lastname']);
+        $newPostParamFirstname = iconv('CP1251', 'UTF-8', $postParams['firstname']);
+        $newPostParamLastname = iconv('CP1251', 'UTF-8', $postParams['lastname']);
 
-        $statment->bindParam(':firstname', $newPutParamFirstname);
-        $statment->bindParam(':lastname', $newPutParamLastname);
-        $statment->bindParam(':avatar', $_POST['avatar']);
-        $statment->bindParam(':is_admin', $_POST['is_admin']);
+        $this->statment->bindParam(':firstname', $newPostParamFirstname);
+        $this->statment->bindParam(':lastname', $newPostParamLastname);
+        $this->statment->bindParam(':avatar', $postParams['avatar']);
+        $this->statment->bindParam(':is_admin', $postParams['is_admin']);
 
-        return $statment;
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     
@@ -99,25 +106,27 @@ class User extends AbstractTable
      * @param int $id
      * @param array $putParams - параметры запроса
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForUpdateElement(int $id, array $putParams): object
+    public function isUpdateElementCompleted(int $id, array $putParams): bool
     {
         $query = "UPDATE users SET
                 firstname = :firstname, lastname = :lastname, avatar = :avatar, is_admin = :is_admin
                 WHERE user_id = :user_id";
-        $statment = $this->pdo->prepare($query);
+        $this->statment = $this->pdo->prepare($query);
         
         $newPutParamFirstname = iconv('CP1251', 'UTF-8', $putParams['firstname']);
         $newPutParamLastname = iconv('CP1251', 'UTF-8', $putParams['lastname']);
         
-        $statment->bindParam(':firstname', $newPutParamFirstname);
-        $statment->bindParam(':lastname', $newPutParamLastname);
-        $statment->bindParam(':avatar', $putParams['avatar']);
-        $statment->bindParam(':is_admin', $putParams['is_admin']);
-        $statment->bindParam(':user_id', $id);
+        $this->statment->bindParam(':firstname', $newPutParamFirstname);
+        $this->statment->bindParam(':lastname', $newPutParamLastname);
+        $this->statment->bindParam(':avatar', $putParams['avatar']);
+        $this->statment->bindParam(':is_admin', $putParams['is_admin']);
+        $this->statment->bindParam(':user_id', $id);
         
-        return $statment;
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
@@ -125,15 +134,17 @@ class User extends AbstractTable
      *
      * @param int $id
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForDeleteElement(int $id): object
+    public function isDeleteteElementCompleted(int $id): bool
     {
         $query = "DELETE FROM users WHERE user_id = :user_id";
-        $statment = $this->pdo->prepare($query);
-        $statment->bindParam(':user_id', $id);
+        $this->statment = $this->pdo->prepare($query);
+        $this->statment->bindParam(':user_id', $id);
 
-        return $statment;
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**

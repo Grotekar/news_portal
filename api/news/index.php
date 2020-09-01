@@ -16,7 +16,7 @@ $news = new News($pdo);
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $response = $news->difficultGetRequest();
+        $response = $news->processingGetRequest();
         break;
     case 'POST':
         $response = $news->createElement();

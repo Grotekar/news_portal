@@ -16,7 +16,7 @@ $categories = new Category($pdo);
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $response = $categories->getRequest();
+        $response = $categories->processingGetRequest();
         break;
     case 'POST':
         $response = $categories->createElement();

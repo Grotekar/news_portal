@@ -28,26 +28,30 @@ class Category extends AbstractTable
     /**
      * Запрос для получения всех элементов
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForAllElements(): object
+    public function isGetAllComplited(): bool
     {
         $query = "SELECT * FROM tags";
-        $statment = $this->pdo->prepare($query);
-        return $statment;
+        $this->statment = $this->pdo->prepare($query);
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
      * Запрос для получения элемента
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForGetElement(int $id): object
+    public function isGetElementComplited(int $id): bool
     {
         $query = "SELECT * FROM tags WHERE tag_id=(:tag_id)";
-        $statment = $this->pdo->prepare($query);
-        $statment->bindParam(":tag_id", $id);
-        return $statment;
+        $this->statment = $this->pdo->prepare($query);
+        $this->statment->bindParam(":tag_id", $id);
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
@@ -67,20 +71,21 @@ class Category extends AbstractTable
     /**
      * Запрос на создание элемента
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForCreateElement(): object
-    {
-        
+    public function isCreateElementCompleted(array $postParams): bool
+    {    
         $query = "INSERT INTO tags (name) 
                 VALUES (:name)";
-        $statment = $this->pdo->prepare($query);
+        $this->statment = $this->pdo->prepare($query);
 
         $newPostParamName = iconv('CP1251', 'UTF-8', $_POST['name']);
 
-        $statment->bindParam(':name', $newPostParamName);
+        $this->statment->bindParam(':name', $newPostParamName);
 
-        return $statment;
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
@@ -89,21 +94,23 @@ class Category extends AbstractTable
      * @param int $id
      * @param array $putParams - параметры запроса
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForUpdateElement(int $id, array $putParams): object
+    public function isUpdateElementCompleted(int $id, array $putParams): bool
     {
         $query = "UPDATE tags SET
             name = :name
             WHERE tag_id = :tag_id";
-        $statment = $this->pdo->prepare($query);
+        $this->statment = $this->pdo->prepare($query);
 
         $newPutParamAName = iconv('CP1251', 'UTF-8', $putParams['name']);
         
-        $statment->bindParam(':name', $newPutParamName);
-        $statment->bindParam(':tag_id', $id);
+        $this->statment->bindParam(':name', $newPutParamName);
+        $this->statment->bindParam(':tag_id', $id);
 
-        return $statment;
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
@@ -111,15 +118,17 @@ class Category extends AbstractTable
      *
      * @param int $id
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForDeleteElement(int $id): object
+    public function isDeleteteElementCompleted(int $id): bool
     {
         $query = "DELETE FROM tags WHERE tag_id = :tag_id";
         $statment = $this->pdo->prepare($query);
         $statment->bindParam(':tag_id', $id);
 
-        return $statment;
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**

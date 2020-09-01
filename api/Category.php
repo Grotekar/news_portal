@@ -26,28 +26,68 @@ class Category extends AbstractTable
     }
 
     /**
+     * Подготовка данных перед выдачей
+     *
+     * @return string
+     */
+    public function processingGetRequest(): string
+    {
+        if ($this->isGetRequestSuccess() === true) {
+            // Получение данных новостей
+            /* $preliminaryDataFromNews = $this->response;
+            
+            // Преобразование новостей к нужной форме для обработки
+            $listOfNewsArray = json_decode($preliminaryDataFromNews);
+            if (is_array($listOfNewsArray) === false) {
+                $listOfNewsArray = [$listOfNewsArray];
+            }
+            
+            // На основании данных новостей заменить id категории на название с учетом вложенности
+            $listOfNewsArray = $this->getCategories($listOfNewsArray);
+
+            // Получить теги новостей
+            $listOfNewsArray = $this->getTagsForNews($listOfNewsArray);
+
+            // Получить изображения к новости
+            $listOfNewsArray = $this->getImagesForNews($listOfNewsArray);
+
+            // Получение результата
+            $result = json_encode($listOfNewsArray); */
+            $result = $this->response;
+        } else {
+            $result = $this->response;
+        }
+
+        return $result;        
+    }
+    
+    /**
      * Запрос для получения всех элементов
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForAllElements(): object
+    public function isGetAllComplited(): bool
     {
         $query = "SELECT * FROM categories";
-        $statment = $this->pdo->prepare($query);
-        return $statment;
+        $this->statment = $this->pdo->prepare($query);
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
      * Запрос для получения элемента
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForGetElement(int $id): object
+    public function isGetElementComplited(int $id): bool
     {
         $query = "SELECT * FROM categories WHERE category_id=(:category_id)";
-        $statment = $this->pdo->prepare($query);
-        $statment->bindParam(":category_id", $id);
-        return $statment;
+        $this->statment = $this->pdo->prepare($query);
+        $this->statment->bindParam(":category_id", $id);
+        $status = $this->statment->execute();
+
+        return $status;
     }
 
     /**
@@ -70,21 +110,22 @@ class Category extends AbstractTable
     /**
      * Запрос на создание элемента
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForCreateElement(): object
-    {
-        
+    public function isCreateElementCompleted(array $postParams): bool
+    {        
         $query = "INSERT INTO categories (name, parent_category) 
                 VALUES (:name, :parent_category)";
-        $statment = $this->pdo->prepare($query);
+        $this->statment = $this->pdo->prepare($query);
 
         $newPostParamName = iconv('CP1251', 'UTF-8', $_POST['name']);
 
-        $statment->bindParam(':name', $newPostParamName);
-        $statment->bindParam(':parent_category', $_POST['parent_category']);
+        $this->statment->bindParam(':name', $newPostParamName);
+        $this->statment->bindParam(':parent_category', $_POST['parent_category']);
+        
+        $status = $this->statment->execute();
 
-        return $statment;
+        return $status;
     }
 
     /**
@@ -93,22 +134,24 @@ class Category extends AbstractTable
      * @param int $id
      * @param array $putParams - параметры запроса
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForUpdateElement(int $id, array $putParams): object
+    public function isUpdateElementCompleted(int $id, array $putParams): bool
     {
         $query = "UPDATE categories SET
             name = :name, parent_category = :parent_category
             WHERE category_id = :category_id";
-        $statment = $this->pdo->prepare($query);
+        $this->statment = $this->pdo->prepare($query);
 
         $newPutParamAName = iconv('CP1251', 'UTF-8', $putParams['name']);
         
-        $statment->bindParam(':name', $newPutParamName);
-        $statment->bindParam(':parent_category', $putParams['parent_category']);
-        $statment->bindParam(':category_id', $id);
+        $this->statment->bindParam(':name', $newPutParamName);
+        $this->statment->bindParam(':parent_category', $putParams['parent_category']);
+        $this->statment->bindParam(':category_id', $id);
+        
+        $status = $this->statment->execute();
 
-        return $statment;
+        return $status;
     }
 
     /**
@@ -116,15 +159,17 @@ class Category extends AbstractTable
      *
      * @param int $id
      *
-     * @return object
+     * @return bool
      */
-    protected function getStatmentForDeleteElement(int $id): object
+    public function isDeleteteElementCompleted(int $id): bool
     {
         $query = "DELETE FROM categories WHERE category_id = :category_id";
-        $statment = $this->pdo->prepare($query);
-        $statment->bindParam(':category_id', $id);
+        $this->statment = $this->pdo->prepare($query);
+        $this->statment->bindParam(':category_id', $id);
+        
+        $status = $this->statment->execute();
 
-        return $statment;
+        return $status;
     }
 
     /**
