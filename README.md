@@ -39,6 +39,8 @@
 
 Чтобы выполнить эти миграции необходимо запустить скрипт [testDump/makeMigrations.php](https://github.com/Grotekar/news_portal/blob/master/testDump/makeMigrations.php).
 
+Также в каталоге [tests/PHPUnit/Framework](https://github.com/Grotekar/news_portal/blob/master/tests/PHPUnit/Framework)
+хранятся тесты запросов к таблицам **users** и **news**.
 ## 6. Описание файлов
 
 ### [api/users/index.php](https://github.com/Grotekar/news_portal/blob/master/api/users/index.php)
@@ -117,6 +119,9 @@
 
 ### [testDump](https://github.com/Grotekar/news_portal/blob/master/testDump)
 Каталог содержит файлы-миграции для заполнения базы данных тестовыми данными.
+
+### [tests/PHPUnit/Framework](https://github.com/Grotekar/news_portal/blob/master/tests/PHPUnit/Framework)
+Каталог хранит тесты запросов к таблицам **users** и **news**.
 
 ### [utils/Logger.php](https://github.com/Grotekar/news_portal/blob/master/utils/Logger.php)
 Класс, содержащий реализацию логирования.
