@@ -57,7 +57,7 @@ class News extends AbstractTable
             $result = $this->response;
         }
 
-        return $result;        
+        return $result;
     }
 
     /**
@@ -119,10 +119,10 @@ class News extends AbstractTable
      * @param array
      */
     private function getTagsForNews(array $listOfNews)
-    {        
+    {
         // Для каждой новости...
         foreach ($listOfNews as $key => $newsElement) {
-            // Получить все тэги новости
+            // Получить все теги новости
             $query = "SELECT tags.name FROM tags
                         JOIN news_has_tag
                             ON tags.tag_id = news_has_tag.tag_id
@@ -131,14 +131,14 @@ class News extends AbstractTable
             $statment->bindParam(':news_id', $newsElement->news_id);
             $statment->execute();
             
-            //Вывести все тэги в массиве
+            //Вывести все теги в массиве
             $tags = [];
             
             foreach ($statment->fetchAll(\PDO::FETCH_ASSOC) as $key => $tag) {
                 $tags[] = $tag['name'];
             }
 
-            // Добавить массив тэгов
+            // Добавить массив тегов
             $newsElement->tags = $tags;
         }
 
@@ -154,7 +154,7 @@ class News extends AbstractTable
      * @param array
      */
     private function getImagesForNews(array $listOfNews)
-    {        
+    {
         // Для каждой новости...
         foreach ($listOfNews as $key => $newsElement) {
             // Получить все изображения к новости
@@ -187,19 +187,201 @@ class News extends AbstractTable
     {
         // Если есть фильтр, то добавить его к запросу
 
-        $filter = " WHERE ";
+        $groupBy = ' GROUP BY ';
+        $groupByArg = 'n.news_id';
+        $filter = ' WHERE ';
         $filterArg = '';
-        if (array_key_exists('created', $_GET)) {
-            $filterArg = "date(n.created) = '{$_GET['created']}'";
-        } elseif (array_key_exists('created_before', $_GET)) {
-            $filterArg = "date(n.created) < '{$_GET['created_before']}'";
-        } elseif (array_key_exists('created_after', $_GET)) {
-            $filterArg = "date(n.created) > '{$_GET['created_after']}'";
-        } else {
+        $additionalTable = '';
+        $orderBy = ' ORDER BY ';
+        $orderByArg = '';
+
+        // Фильтры
+        if (
+            array_key_exists('created', $_GET) ||
+            array_key_exists('created__before', $_GET) ||
+            array_key_exists('created__after', $_GET) ||
+            array_key_exists('firstname', $_GET) ||
+            array_key_exists('category_id', $_GET) ||
+            array_key_exists('tag_id', $_GET) ||
+            array_key_exists('tag__in', $_GET) ||
+            array_key_exists('article', $_GET) ||
+            array_key_exists('content', $_GET)
+        ) {
+            // Фильтр по дате
+            if (array_key_exists('created', $_GET)) {
+                $filterArg = "date(n.created) = '{$_GET['created']}'";
+            } elseif (array_key_exists('created__before', $_GET)) {
+                $filterArg = "date(n.created) < '{$_GET['created_before']}'";
+            } elseif (array_key_exists('created__after', $_GET)) {
+                $filterArg = "date(n.created) > '{$_GET['created_after']}'";
+            }
+
+            // Фильтр по имени автора
+            if (array_key_exists('firstname', $_GET)) {
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND u.firstname = '{$_GET['firstname']}'";
+                } else {
+                    $filterArg = $filterArg . "u.firstname = '{$_GET['firstname']}'";
+                }
+            }
+
+            // Фильтр по id категории
+            if (array_key_exists('category_id', $_GET)) {
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND n.category_id = '{$_GET['category_id']}'";
+                } else {
+                    $filterArg = $filterArg . "n.category_id = '{$_GET['category_id']}'";
+                }
+            }
+
+            // Фильтр по id тега
+            if (array_key_exists('tag_id', $_GET)) {
+                $additionalTable = $additionalTable . " JOIN news_has_tag
+                                        on n.news_id = news_has_tag.news_id";
+
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND news_has_tag.tag_id = '{$_GET['tag_id']}'";
+                } else {
+                    $filterArg = $filterArg . "news_has_tag.tag_id = '{$_GET['tag_id']}'";
+                }
+            } elseif (array_key_exists('tag__in', $_GET)) {
+                $additionalTable = $additionalTable . " JOIN news_has_tag
+                                        ON n.news_id = news_has_tag.news_id";
+
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND news_has_tag.tag_id IN {$_GET['tag__in']}";
+                } else {
+                    $filterArg = $filterArg . "news_has_tag.tag_id IN {$_GET['tag__in']}";
+                }
+            } /* elseif (array_key_exists('tag__all', $_GET)) {
+                $additionalTable = " JOIN news_has_tag
+                                        ON n.news_id = news_has_tag.news_id";
+
+                // Разобрать аргументы
+                $argsInString = substr($_GET['tag__all'], 1, -1);
+                $resultArgs = str_replace(',', ' AND ');
+
+                /* print_r($tempArgsInString);
+                exit; */
+            /*
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND news_has_tag.tag_id IN {$_GET['tag__in']}";
+                } else {
+                    $filterArg = $filterArg . "news_has_tag.tag_id IN {$_GET['tag__in']}";
+                }
+            } */
+
+            // Фильтр по вхождению в названии статьи
+            if (array_key_exists('article', $_GET)) {
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND n.article LIKE '%{$_GET['article']}%'";
+                } else {
+                    $filterArg = $filterArg . "n.article LIKE '%{$_GET['article']}%'";
+                }
+            }
+            
+            // Фильтр по вхождению в контент
+            if (array_key_exists('content', $_GET)) {
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND n.content LIKE '%{$_GET['content']}%'";
+                } else {
+                    $filterArg = $filterArg . "n.content LIKE '%{$_GET['content']}%'";
+                }
+            }
+        // Поиск
+        } elseif (array_key_exists('search', $_GET)) {
+            // Поиск всех вхождений
+            if (array_key_exists('search', $_GET)) {
+                $additionalTable = $additionalTable . " JOIN categories c
+                                        ON c.category_id = n.category_id";
+
+                // Проверить была ли уже добавлена таблица news_has_tag
+                $table = " JOIN news_has_tag
+                                ON n.news_id = news_has_tag.news_id";
+                $pos = stripos($additionalTable, $table);
+                if ($pos === false) {
+                    $additionalTable = $additionalTable . $table;
+                }
+
+                $additionalTable = $additionalTable . " JOIN tags t
+                                        ON t.tag_id = news_has_tag.tag_id";
+
+                if ($filterArg !== '') {
+                    $filterArg = $filterArg . " AND (
+                                                    n.content LIKE '%{$_GET['search']}%' 
+                                                    OR u.firstname LIKE '%{$_GET['search']}%' 
+                                                    OR c.name LIKE '%{$_GET['search']}%'
+                                                    OR t.name LIKE '%{$_GET['search']}%'
+                                                )";
+                } else {
+                    $filterArg = $filterArg . " (
+                        n.content LIKE '%{$_GET['search']}%' 
+                        OR u.firstname LIKE '%{$_GET['search']}%' 
+                        OR c.name LIKE '%{$_GET['search']}%'
+                        OR t.name LIKE '%{$_GET['search']}%'
+                    )";
+                }
+            }
+        }
+
+        // Сортировка
+        if (array_key_exists('sort', $_GET)) {
+            if ($_GET['sort'] === 'created_asc') {
+                $orderByArg = "n.created";
+            } elseif ($_GET['sort'] === 'created_desc') {
+                $orderByArg = "n.created DESC";
+            }
+
+            if ($_GET['sort'] === 'firstname') {
+                if ($orderByArg !== '') {
+                    $orderByArg = $orderByArg . ', u.firstname';
+                } else {
+                    $orderByArg = "u.firstname";
+                }
+            }
+
+            if ($_GET['sort'] === 'category') {
+                // Проверить была ли уже добавлена таблица categories
+                $table = " JOIN categories c
+                                ON c.category_id = n.category_id";
+                $pos = stripos($additionalTable, $table);
+                if ($pos === false) {
+                    $additionalTable = $additionalTable . $table;
+                }
+                
+                if ($orderByArg !== '') {
+                    $orderByArg = $orderByArg . ', c.name';
+                } else {
+                    $orderByArg = "c.name";
+                }
+            }
+
+            /* if ($_GET['sort'] === 'image') {
+                // Проверить была ли уже добавлена таблица images
+                $table = " JOIN images c
+                                ON images.news_id = n.news_id";
+                $pos = stripos($additionalTable, $table);
+                if ($pos === false) {
+                    $additionalTable = $additionalTable . $table;
+                }
+
+                if ($orderByArg !== '') {
+                    $orderByArg = $orderByArg . ', c.name';
+                } else {
+                    $orderByArg = "c.name";
+                }
+            } */
+        }
+        
+        if ($filterArg === '') {
             $filter = '';
         }
 
-        $query = "SELECT 
+        if ($orderByArg === '') {
+            $orderBy = '';
+        }
+
+        $query = "SELECT
                         n.news_id,
                         n.article,
                         n.created,
@@ -210,12 +392,16 @@ class News extends AbstractTable
                         n.main_image
                 FROM news n
                     JOIN users u
-                        ON n.author_id = u.user_id" . $filter . $filterArg;
+                        ON n.author_id = u.user_id"
+                . $additionalTable
+                . $filter . $filterArg
+                . $groupBy . $groupByArg
+                . $orderBy . $orderByArg;
         $this->statment = $this->pdo->prepare($query);
-        $status = $this->statment->execute();
 
-        //print_r($this->statment);
-        //print_r($this->statment->fetchAll(PDO::FETCH_ASSOC));
+        // print_r($this->statment);
+
+        $status = $this->statment->execute();
 
         return $status;
     }
@@ -263,8 +449,8 @@ class News extends AbstractTable
      * @return bool
      */
     public function isCreateElementCompleted(array $postParams): bool
-    {        
-        $query = "INSERT INTO news (article, author_id, category_id, content, main_image) 
+    {
+        $query = "INSERT INTO news (article, author_id, category_id, content, main_image)
                 VALUES (:article, :author_id, :category_id, :content, :main_image)";
         $this->statment = $this->pdo->prepare($query);
 
