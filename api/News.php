@@ -12,8 +12,7 @@ use Psr\Log\LoggerInterface;
  */
 class News extends AbstractTable
 {
-    private PDO $pdo;
-    protected string $tableName = 'news';
+    protected PDO $pdo;
     protected LoggerInterface $logger;
     
     /**
@@ -28,36 +27,36 @@ class News extends AbstractTable
     /**
      * Подготовка данных перед выдачей
      *
-     * @return string
+     * @return void
      */
-    public function processingGetRequest(): string
+    public function processingGetRequest(): void
     {
         if ($this->isGetRequestSuccess() === true) {
-            // Получение данных новостей
-            $preliminaryDataFromNews = $this->response;
-            
-            // Преобразование новостей к нужной форме для обработки
-            $listOfNewsArray = json_decode($preliminaryDataFromNews);
-            if (is_array($listOfNewsArray) === false) {
-                $listOfNewsArray = [$listOfNewsArray];
+            if ($this->statment->rowCount() !== 0) {
+                // Получение данных новостей
+                $preliminaryDataFromNews = $this->response;
+                
+                // Преобразование новостей к нужной форме для обработки
+                $listOfNewsArray = json_decode($preliminaryDataFromNews);
+                if (is_array($listOfNewsArray) === false) {
+                    $listOfNewsArray = [$listOfNewsArray];
+                }
+                
+                // На основании данных новостей заменить id категории на название с учетом вложенности
+                $listOfNewsArray = $this->getCategories($listOfNewsArray);
+
+                // Получить теги новостей
+                $listOfNewsArray = $this->getTagsForNews($listOfNewsArray);
+
+                // Получить изображения к новости
+                $listOfNewsArray = $this->getImagesForNews($listOfNewsArray);
+
+                // Получение результата
+                $this->response = json_encode($listOfNewsArray);
             }
-            
-            // На основании данных новостей заменить id категории на название с учетом вложенности
-            $listOfNewsArray = $this->getCategories($listOfNewsArray);
-
-            // Получить теги новостей
-            $listOfNewsArray = $this->getTagsForNews($listOfNewsArray);
-
-            // Получить изображения к новости
-            $listOfNewsArray = $this->getImagesForNews($listOfNewsArray);
-
-            // Получение результата
-            $result = json_encode($listOfNewsArray);
         } else {
-            $result = $this->response;
+            $this->response;
         }
-
-        return $result;
     }
 
     /**
@@ -71,7 +70,9 @@ class News extends AbstractTable
     {
         // Получение категорий через API
         $categories = new Category($this->pdo);
-        $listOfCategoriesJson = $categories->processingGetRequest();
+        $categories->processingGetRequest();
+        $listOfCategoriesJson = $categories->getResponse();
+
         $listOfCategoriesArray = json_decode($listOfCategoriesJson);
 
         // Для каждой новости...
@@ -80,7 +81,6 @@ class News extends AbstractTable
             $parentCategoryId = null;
             $categoriesOfNewsElement = null;
             $categoryName = '';
-            
             // Получить первую категорию с подкатегорией
             for ($i = 0; $i < count($listOfCategoriesArray); $i++) {
                 if ($listOfCategoriesArray[$i]->category_id === $newsElement->category_id) {
@@ -128,7 +128,9 @@ class News extends AbstractTable
                             ON tags.tag_id = news_has_tag.tag_id
                         WHERE news_has_tag.news_id = :news_id";
             $statment = $this->pdo->prepare($query);
+
             $statment->bindParam(':news_id', $newsElement->news_id);
+            
             $statment->execute();
             
             //Вывести все теги в массиве
@@ -161,7 +163,9 @@ class News extends AbstractTable
             $query = "SELECT image_id FROM images
                         WHERE news_id = :news_id";
             $statment = $this->pdo->prepare($query);
+
             $statment->bindParam(':news_id', $newsElement->news_id);
+
             $statment->execute();
             
             //Вывести все изображения в массиве
@@ -415,7 +419,9 @@ class News extends AbstractTable
     {
         $query = "SELECT * FROM news WHERE news_id=(:news_id)";
         $this->statment = $this->pdo->prepare($query);
+
         $this->statment->bindParam(":news_id", $id);
+        
         $status = $this->statment->execute();
 
         return $status;
@@ -454,13 +460,10 @@ class News extends AbstractTable
                 VALUES (:article, :author_id, :category_id, :content, :main_image)";
         $this->statment = $this->pdo->prepare($query);
 
-        $newPostParamArticle = iconv('CP1251', 'UTF-8', $postParams['article']);
-        $newPostParamContent = iconv('CP1251', 'UTF-8', $postParams['content']);
-
-        $this->statment->bindParam(':article', $newPostParamArticle);
-        $this->statment->bindParam(':author_id', $postParams['author_id']);
+        $this->statment->bindParam(':article', $postParams['article']);
+        $this->statment->bindParam(':author_id', $_SERVER['PHP_AUTH_USER']);
         $this->statment->bindParam(':category_id', $postParams['category_id']);
-        $this->statment->bindParam(':content', $newPostParamContent);
+        $this->statment->bindParam(':content', $postParams['content']);
         $this->statment->bindParam(':main_image', $postParams['main_image']);
 
         $status = $this->statment->execute();
@@ -483,14 +486,11 @@ class News extends AbstractTable
             content = :content, main_image = :main_image
             WHERE news_id = :news_id";
         $this->statment = $this->pdo->prepare($query);
-
-        $newPutParamArticle = iconv('CP1251', 'UTF-8', $putParams['article']);
-        $newPutParamContent = iconv('CP1251', 'UTF-8', $putParams['content']);
         
-        $this->statment->bindParam(':article', $newPutParamArticle);
-        $this->statment->bindParam(':author_id', $putParams['author_id']);
+        $this->statment->bindParam(':article', $putParams['article']);
+        $this->statment->bindParam(':author_id', $_SERVER['PHP_AUTH_USER']);
         $this->statment->bindParam(':category_id', $putParams['category_id']);
-        $this->statment->bindParam(':content', $newPutParamContent);
+        $this->statment->bindParam(':content', $putParams['content']);
         $this->statment->bindParam(':main_image', $putParams['main_image']);
         $this->statment->bindParam(':news_id', $id);
 

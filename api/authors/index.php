@@ -4,7 +4,7 @@ namespace Models;
 namespace Api;
 
 use Models\Database as Database;
-use Api\User as User;
+use Api\Author as Author;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -13,26 +13,29 @@ header("Content-Type: application/json; charset=utf-8");
 $database = new Database();
 $pdo = $database->getConnect();
 
-$users = new User($pdo);
+$authors = new Author($pdo);
 
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $users->processinggetRequest();
+        if ($authors->isAdmin() === true) {
+            $authors->processinggetRequest();
+        }
         break;
     case 'POST':
-        $users->createElement();
+        if ($authors->isAdmin() === true) {
+            $authors->createElement();
+        }
         break;
     case 'PUT':
-        if ($users->isAccessAllowed() === true) {
+        if ($authors->isAdmin() === true) {
             parse_str(file_get_contents('php://input'), $putParams);
-            $users->updateElement($putParams);
+            $authors->updateElement($putParams);
         }
-        
         break;
     case 'DELETE':
-        if ($users->isAdmin() === true) {
-            $users->deleteElement();
+        if ($authors->isAdmin() === true) {
+            $authors->deleteElement();
         }
         break;
     
@@ -43,4 +46,4 @@ switch ($_SERVER['REQUEST_METHOD']) {
         ]);
         break;
 }
-echo $users->getResponse();
+echo $authors->getResponse();

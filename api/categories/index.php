@@ -8,6 +8,8 @@ use Api\Category as Category;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+header("Content-Type: application/json; charset=utf-8");
+
 $database = new Database();
 $pdo = $database->getConnect();
 
@@ -19,18 +21,27 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $response = $categories->processingGetRequest();
         break;
     case 'POST':
-        $response = $categories->createElement();
+        if ($categories->isAdmin() === true) {
+            $categories->createElement();
+        }
         break;
     case 'PUT':
-        parse_str(file_get_contents('php://input'), $putParams);
-        $response = $categories->updateElement($putParams);
+        if ($categories->isAdmin() === true) {
+            parse_str(file_get_contents('php://input'), $putParams);
+            $categories->updateElement($putParams);
+        }
         break;
     case 'DELETE':
-        $response = $categories->deleteElement();
+        if ($categories->isAdmin() === true) {
+            $categories->deleteElement();
+        }
         break;
     
     default:
-        $response = ['message_error' => 'Разрешенеы запросы только GET, POST, PUT и DELETE'];
+        echo json_encode([
+            'status' => false,
+            'message' => 'Invalid request'
+        ]);
         break;
 }
-print_r($response);
+echo $categories->getResponse();

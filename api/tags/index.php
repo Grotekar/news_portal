@@ -8,6 +8,8 @@ use Api\Tag as Tag;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+header("Content-Type: application/json; charset=utf-8");
+
 $database = new Database();
 $pdo = $database->getConnect();
 
@@ -16,21 +18,30 @@ $tags = new Tag($pdo);
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $response = $tags->getRequest();
+        $tags->processingGetRequest();
         break;
     case 'POST':
-        $response = $tags->createElement();
+        if ($tags->isAdmin() === true) {
+            $tags->createElement();
+        }
         break;
     case 'PUT':
-        parse_str(file_get_contents('php://input'), $putParams);
-        $response = $tags->updateElement($putParams);
+        if ($tags->isAdmin() === true) {
+            parse_str(file_get_contents('php://input'), $putParams);
+            $tags->updateElement($putParams);
+        }
         break;
     case 'DELETE':
-        $response = $tags->deleteElement();
+        if ($tags->isAdmin() === true) {
+            $tags->deleteElement();
+        }
         break;
     
     default:
-        $response = ['message_error' => 'Разрешенеы запросы только GET, POST, PUT и DELETE'];
+        echo json_encode([
+            'status' => false,
+            'message' => 'Invalid request'
+        ]);
         break;
 }
-print_r($response);
+echo $tags->getResponse();

@@ -10,9 +10,10 @@ use Psr\Log\LoggerInterface;
 /**
  * Класс подготавливает SQL-запросы.
  */
-class User extends AbstractTable
+class Author extends AbstractTable
 {
     protected PDO $pdo;
+    protected string $tableName = 'authors';
     protected LoggerInterface $logger;
     
     /**
@@ -42,7 +43,16 @@ class User extends AbstractTable
      */
     public function isGetAllComplited(): bool
     {
-        $query = "SELECT * FROM users";
+        $query = "SELECT u.user_id,
+                        u.firstname,
+                        u.lastname,
+                        u.avatar,
+                        u.created,
+                        u.is_admin,
+                        a.description
+                FROM users u
+                JOIN authors a
+                    ON u.user_id = a.user_id";
         $this->statment = $this->pdo->prepare($query);
         $status = $this->statment->execute();
 
@@ -56,11 +66,21 @@ class User extends AbstractTable
      */
     public function isGetElementComplited(int $id): bool
     {
-        $query = "SELECT * FROM users WHERE user_id=(:user_id)";
+        $query = "SELECT u.user_id,
+                        u.firstname,
+                        u.lastname,
+                        u.avatar,
+                        u.created,
+                        u.is_admin,
+                        a.description
+                FROM users u
+                JOIN authors a
+                    ON u.user_id = a.user_id
+                WHERE a.user_id = (:user_id)";
         $this->statment = $this->pdo->prepare($query);
-
+        
         $this->statment->bindParam(":user_id", $id);
-
+        
         $status = $this->statment->execute();
 
         return $status;
@@ -74,10 +94,8 @@ class User extends AbstractTable
     protected function isExistsParamsInArray(array $params): bool
     {
         if (
-            array_key_exists('firstname', $params) &&
-            array_key_exists('lastname', $params) &&
-            array_key_exists('avatar', $params) &&
-            array_key_exists('is_admin', $params)
+            array_key_exists('user_id', $params) &&
+            array_key_exists('description', $params)
         ) {
             return true;
         } else {
@@ -94,20 +112,16 @@ class User extends AbstractTable
      */
     public function isCreateElementCompleted(array $postParams): bool
     {
-        $query = "INSERT INTO users (firstname, lastname, avatar, is_admin) 
-                VALUES (:firstname, :lastname, :avatar, :is_admin)";
+        $query = "INSERT INTO authors (user_id, description) 
+                VALUES (:user_id, :description)";
         $this->statment = $this->pdo->prepare($query);
 
-        $this->statment->bindParam(':firstname', $postParams['firstname']);
-        $this->statment->bindParam(':lastname', $postParams['lastname']);
-        $this->statment->bindParam(':avatar', $postParams['avatar']);
-        $this->statment->bindParam(':is_admin', $postParams['is_admin']);
+        $this->statment->bindParam(':description', $postParams['description']);
 
         $status = $this->statment->execute();
 
         return $status;
     }
-
     
     /**
      * Запрос для обновления элемента
@@ -119,15 +133,11 @@ class User extends AbstractTable
      */
     public function isUpdateElementCompleted(int $id, array $putParams): bool
     {
-        $query = "UPDATE users SET
-                firstname = :firstname, lastname = :lastname, avatar = :avatar, is_admin = :is_admin
-                WHERE user_id = :user_id";
+        $query = "UPDATE authors SET
+                description = :description WHERE user_id = :user_id";
         $this->statment = $this->pdo->prepare($query);
         
-        $this->statment->bindParam(':firstname', $putParams['firstname']);
-        $this->statment->bindParam(':lastname', $putParams['lastname']);
-        $this->statment->bindParam(':avatar', $putParams['avatar']);
-        $this->statment->bindParam(':is_admin', $putParams['is_admin']);
+        $this->statment->bindParam(':description', $putParams['description']);
         $this->statment->bindParam(':user_id', $id);
         
         $status = $this->statment->execute();
@@ -144,8 +154,9 @@ class User extends AbstractTable
      */
     public function isDeleteteElementCompleted(int $id): bool
     {
-        $query = "DELETE FROM users WHERE user_id = :user_id";
+        $query = "DELETE FROM authors WHERE user_id = :user_id";
         $this->statment = $this->pdo->prepare($query);
+
         $this->statment->bindParam(':user_id', $id);
 
         $status = $this->statment->execute();
@@ -158,6 +169,6 @@ class User extends AbstractTable
      */
     protected function getId(): int
     {
-        return (int) substr($_SERVER['REQUEST_URI'], 11);
+        return (int) substr($_SERVER['REQUEST_URI'], 13);
     }
 }

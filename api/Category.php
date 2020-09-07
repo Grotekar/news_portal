@@ -12,8 +12,7 @@ use Psr\Log\LoggerInterface;
  */
 class Category extends AbstractTable
 {
-    private PDO $pdo;
-    private string $tableName = 'categories';
+    protected PDO $pdo;
     protected LoggerInterface $logger;
     
     /**
@@ -28,37 +27,11 @@ class Category extends AbstractTable
     /**
      * Подготовка данных перед выдачей
      *
-     * @return string
+     * @return void
      */
-    public function processingGetRequest(): string
+    public function processingGetRequest(): void
     {
-        if ($this->isGetRequestSuccess() === true) {
-            // Получение данных новостей
-            /* $preliminaryDataFromNews = $this->response;
-            
-            // Преобразование новостей к нужной форме для обработки
-            $listOfNewsArray = json_decode($preliminaryDataFromNews);
-            if (is_array($listOfNewsArray) === false) {
-                $listOfNewsArray = [$listOfNewsArray];
-            }
-            
-            // На основании данных новостей заменить id категории на название с учетом вложенности
-            $listOfNewsArray = $this->getCategories($listOfNewsArray);
-
-            // Получить теги новостей
-            $listOfNewsArray = $this->getTagsForNews($listOfNewsArray);
-
-            // Получить изображения к новости
-            $listOfNewsArray = $this->getImagesForNews($listOfNewsArray);
-
-            // Получение результата
-            $result = json_encode($listOfNewsArray); */
-            $result = $this->response;
-        } else {
-            $result = $this->response;
-        }
-
-        return $result;        
+        $this->isGetRequestSuccess();
     }
     
     /**
@@ -84,7 +57,9 @@ class Category extends AbstractTable
     {
         $query = "SELECT * FROM categories WHERE category_id=(:category_id)";
         $this->statment = $this->pdo->prepare($query);
+        
         $this->statment->bindParam(":category_id", $id);
+        
         $status = $this->statment->execute();
 
         return $status;
@@ -98,8 +73,7 @@ class Category extends AbstractTable
     protected function isExistsParamsInArray(array $params): bool
     {
         if (
-            array_key_exists('name', $params) &&
-            array_key_exists('parent_category', $params)
+            array_key_exists('name', $params)
         ) {
             return true;
         } else {
@@ -110,18 +84,18 @@ class Category extends AbstractTable
     /**
      * Запрос на создание элемента
      *
+     * @param array $postParams
+     *
      * @return bool
      */
     public function isCreateElementCompleted(array $postParams): bool
-    {        
+    {
         $query = "INSERT INTO categories (name, parent_category) 
                 VALUES (:name, :parent_category)";
         $this->statment = $this->pdo->prepare($query);
 
-        $newPostParamName = iconv('CP1251', 'UTF-8', $_POST['name']);
-
-        $this->statment->bindParam(':name', $newPostParamName);
-        $this->statment->bindParam(':parent_category', $_POST['parent_category']);
+        $this->statment->bindParam(':name', $postParams['name']);
+        $this->statment->bindParam(':parent_category', $postParams['parent_category']);
         
         $status = $this->statment->execute();
 
@@ -143,9 +117,7 @@ class Category extends AbstractTable
             WHERE category_id = :category_id";
         $this->statment = $this->pdo->prepare($query);
 
-        $newPutParamAName = iconv('CP1251', 'UTF-8', $putParams['name']);
-        
-        $this->statment->bindParam(':name', $newPutParamName);
+        $this->statment->bindParam(':name', $putParams['name']);
         $this->statment->bindParam(':parent_category', $putParams['parent_category']);
         $this->statment->bindParam(':category_id', $id);
         
@@ -165,6 +137,7 @@ class Category extends AbstractTable
     {
         $query = "DELETE FROM categories WHERE category_id = :category_id";
         $this->statment = $this->pdo->prepare($query);
+        
         $this->statment->bindParam(':category_id', $id);
         
         $status = $this->statment->execute();

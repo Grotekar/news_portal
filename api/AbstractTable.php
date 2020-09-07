@@ -37,7 +37,6 @@ abstract class AbstractTable implements TableInterface
         header("Access-Control-Allow-Headers: access");
         header("Access-Control-Allow-Methods: GET");
         header("Access-Control-Allow-Credentials: true");
-        header("Content-Type: application/json");
 
         $status = false;
 
@@ -46,8 +45,8 @@ abstract class AbstractTable implements TableInterface
             $status = $this->isGetElement($this->getId());
         } else {
             $status = $this->isGetAll();
-        }
-
+        }   
+        
         return $status;
     }
 
@@ -61,21 +60,20 @@ abstract class AbstractTable implements TableInterface
 
         if ($status === false) {
             $this->logger->error(
-                "The {tableName} table is empty or bad request.\n / 
-                Таблица {tableName} пуста, либо запрос не верен. Сообщение от PDO: {errorInfo}.",
-                ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
+                "Bad request. Message from PDO: {errorInfo}.",
+                ['errorInfo' => $this->statment->errorInfo()[2]]
             );
             
             http_response_code(400);
             $this->response = json_encode([
-                "message_error" => "Bad request. / Запрос не верен.",
-                "message_PDO" => $this->statment->errorInfo()[2]
-            ], JSON_UNESCAPED_UNICODE);
+                "status" => "false",
+                "message" => $this->statment->errorInfo()[2]
+            ]);
         } else {
-            $this->logger->info('The request was completed successfully. / Запрос выполнен успешно.');
+            $this->logger->info('The request was completed successfully.');
             // Фиксация полученных данных
             http_response_code(200);
-            $this->response = json_encode($this->statment->fetchAll(\PDO::FETCH_ASSOC));
+            $this->response = json_encode($this->statment->fetchAll(\PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
         }
 
         return $status;
@@ -100,20 +98,26 @@ abstract class AbstractTable implements TableInterface
         
         if ($status === false) {
             $this->logger->info(
-                "Not found.\n / Не найдено. Сообщение от PDO: {errorInfo}.",
+                "Not found. Message from PDO: {errorInfo}.",
                 ['errorInfo' => $this->statment->errorInfo()[2]]
             );
             
             http_response_code(404);
             $this->response = json_encode([
-                "message_error" => "Not found./ Не найдено.",
-                "message_PDO" => $this->statment->errorInfo()[2]
-            ], JSON_UNESCAPED_UNICODE);
+                "status" => false,
+                "message" => $this->statment->errorInfo()[2]
+            ]);
+        } elseif ($this->statment->rowCount() === 0) {
+            http_response_code(404);
+            $this->response = json_encode([
+                "status" => false,
+                "message" => $this->statment->errorInfo()[2]
+            ]);
         } else {
-            $this->logger->info(' The request was completed successfully. / Запрос выполнен успешно.');
+            $this->logger->info(' The request was completed successfully.');
             // Фиксация полученных данных
             http_response_code(200);
-            $this->response = json_encode($this->statment->fetch(\PDO::FETCH_ASSOC));
+            $this->response = json_encode($this->statment->fetch(\PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
         }
 
         return $status;
@@ -129,18 +133,16 @@ abstract class AbstractTable implements TableInterface
     /**
      * Обработка POST-запроса.
      *
-     * @return string
+     * @return bool
      */
-    public function createElement(): string
+    public function createElement(): bool
     {
         header("Access-Control-Allow-Origin: *");
-        header("Content-Type: application/json; charset=UTF-8");
         header("Access-Control-Allow-Methods: POST");
         header("Access-Control-Max-Age: 3600");
-        header(
-            "Access-Control-Allow-Headers:Content-Type,Access-Control-Allow-Headers,Authorization,X-Requested-With"
-        );
+        header("Access-Control-Allow-Headers: *");
 
+        $status = false;
         // Проверка переданных переменных
         if ($this->isExistsParamsInArray($_POST)) {
             // Результат запроса к таблице
@@ -148,30 +150,28 @@ abstract class AbstractTable implements TableInterface
             
             if ($status === false) {
                 $this->logger->error(
-                    'Bad request. / 
-                    Не удалось выполнить запрос на добавление записи в таблицу {tableName}. 
-                    Сообщение от PDO: {errorInfo}.',
-                    ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
+                    'Bad request. Message from PDO: {errorInfo}.',
+                    ['errorInfo' => $this->statment->errorInfo()[2]]
                 );
                 
                 http_response_code(400);
                 $this->response = json_encode([
-                    "message_error" => "Bad request. / Не удалось выполнить запрос на добавление записи в таблицу.",
-                    "message_PDO" => $this->statment->errorInfo()[2]
-                ], JSON_UNESCAPED_UNICODE);
+                    "status" => false,
+                    "message" => $this->statment->errorInfo()[2]
+                ]);
             } else {
                 http_response_code(201);
                 $this->response = json_encode([
-                    "message_success" => "The request was completed successfully. / 
-                    Добавление записи в таблицу выполнено успешно."
-                ], JSON_UNESCAPED_UNICODE);
-            }
+                    'status' => true,
+                    'id' => $this->pdo->lastInsertId()
+                ]);
+            } 
         } else {
             http_response_code(400);
             $this->response = json_encode([
-                "message_error" => "Bad request or not enough data. / 
-                Не удалось выполнить запрос на добавление записи в таблицу. Неверные данные, либо их недостаточно."
-            ], JSON_UNESCAPED_UNICODE);
+                'status' => false,
+                "message" => "Bad request or not enough data."
+            ]);
         }
 
         return $status;
@@ -197,17 +197,14 @@ abstract class AbstractTable implements TableInterface
      * Обработка PUT-запроса
      * @param array $putParams
      *
-     * @return string
+     * @return void
      */
-    public function updateElement($putParams): string
+    public function updateElement($putParams): void
     {
         header("Access-Control-Allow-Origin: *");
-        header("Content-Type: application/json; charset=UTF-8");
         header("Access-Control-Allow-Methods: PUT");
         header("Access-Control-Max-Age: 3600");
-        header(
-            "Access-Control-Allow-Headers:Content-Type,Access-Control-Allow-Headers,Authorization,X-Requested-With"
-        );
+        header("Access-Control-Allow-Headers: *");
 
         // Получить идентификатор
         $id = $this->getId();
@@ -218,33 +215,29 @@ abstract class AbstractTable implements TableInterface
                         
             if ($status === false) {
                 $this->logger->error(
-                    'Bad request. / 
-                    Не удалось выполнить запрос на обновление записи в таблице {tableName}. 
-                    Сообщение от PDO: {errorInfo}.',
-                    ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
+                    'Bad request. Message from PDO: {errorInfo}.',
+                    ['errorInfo' => $this->statment->errorInfo()[2]]
                 );
                 
                 http_response_code(304);
                 $this->response = json_encode([
-                    "message_error" => "Not modified. / Не удалось выполнить запрос на обновление записи в таблице.",
-                    "message_PDO" => $this->statment->errorInfo()[2]
-                ], JSON_UNESCAPED_UNICODE);
+                    "status" => false,
+                    "message" => $this->statment->errorInfo()[2]
+                ]);
             } else {
                 http_response_code(200);
                 $this->response = json_encode([
-                    "message_success" => "The request was completed successfully. / 
-                    Обновление записи в таблице выполнено успешно."
-                ], JSON_UNESCAPED_UNICODE);
+                    "status" => true,
+                    'id' => "$id"
+                ]);
             }
         } else {
             http_response_code(400);
             $this->response = json_encode([
-                "message_error" => "Bad request or not enough data. / 
-                Не удалось выполнить запрос на обновление записи в таблице. Неверные данные, либо их недостаточно."
-            ], JSON_UNESCAPED_UNICODE);
+                'status' => false,
+                "message" => "Bad request or not enough data."
+            ]);
         }
-
-        return $this->response;
     }
 
     /**
@@ -260,17 +253,14 @@ abstract class AbstractTable implements TableInterface
     /**
      * Обработка DELETE-запроса
      *
-     * @return string
+     * @return void
      */
-    public function deleteElement(): string
+    public function deleteElement(): void
     {
         header("Access-Control-Allow-Origin: *");
-        header("Content-Type: application/json; charset=UTF-8");
         header("Access-Control-Allow-Methods: DELETE");
         header("Access-Control-Max-Age: 3600");
-        header(
-            "Access-Control-Allow-Headers:Content-Type,Access-Control-Allow-Headers,Authorization,X-Requested-With"
-        );
+        header("Access-Control-Allow-Headers: *");
 
         // Получить идентификатор
         $id = $this->getId();
@@ -279,35 +269,38 @@ abstract class AbstractTable implements TableInterface
             // Запрос к таблице
             $status = $this->isDeleteteElementCompleted($id);
 
-            if ($isSuccess === false) {
+            if ($status === false) {
+            
                 $this->logger->error(
-                    'Bad request. / 
-                    Не удалось выполнить запрос на удаление записи из таблицы {tableName}. 
-                    Сообщение от PDO: {errorInfo}.',
-                    ['tableName' => $this->tableName, 'errorInfo' => $this->statment->errorInfo()[2]]
+                    'Bad request. Message from PDO: {errorInfo}.',
+                    ['errorInfo' => $this->statment->errorInfo()[2]]
                 );
                 
-                http_response_code(204);
+                http_response_code(400);
                 $this->response = json_encode([
-                    "message_error" => "No Content. / Не удалось выполнить запрос на удаление записи из таблицы.",
-                    "message_PDO" => $this->statment->errorInfo()[2]
-                ], JSON_UNESCAPED_UNICODE);
+                    'status' => false,
+                    "message" => $this->statment->errorInfo()[2]
+                ]);
+            } elseif ($this->statment->rowCount() === 0) {
+                http_response_code(404);
+                $this->response = json_encode([
+                    "status" => false,
+                    "message" => 'Not Found'
+                ]);
             } else {
                 http_response_code(200);
                 $this->response = json_encode([
-                    "message_success" => "The request was completed successfully. 
-                    / Удаление записи из таблицы выполнено успешно."
-                ], JSON_UNESCAPED_UNICODE);
+                    'status' => true,
+                    "id" => "$id"
+                ]);
             }
         } else {
             http_response_code(400);
             $this->response = json_encode([
-                "message_error" => "Bad request or not enough data. / 
-                Не удалось выполнить запрос на обновление записи в таблице. Неверные данные, либо их недостаточно."
-            ], JSON_UNESCAPED_UNICODE);
+                'status' => false,
+                "message" => "Bad request or not enough data."
+            ]);
         }
-
-        return $this->response;
     }
 
     /**
@@ -323,4 +316,117 @@ abstract class AbstractTable implements TableInterface
      * @return int
      */
     abstract protected function getId(): int;
+
+    /**
+     * Идентификация администратора
+     * 
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        $users = new User($this->pdo);
+
+        if (isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' && $users->isGetElementComplited($_SERVER['PHP_AUTH_USER']) === true) {
+            $this->statment = $users->getStatment();
+            
+            if ($this->statment !== null) {
+                if ($this->statment->rowCount() !== 0) {
+                    $user = $this->statment->fetch(\PDO::FETCH_ASSOC);
+
+                    if ($user['is_admin'] === '1') {
+                        $this->logger->debug('Access is allowed.');
+                        return true;
+                    }
+                }
+            }
+        }
+        $this->logger->debug('Access denied');
+
+        http_response_code(404);
+        $this->response = json_encode([
+            'status' => false,
+            'message' => 'Not Found.'
+        ]);
+        return false;        
+    }
+
+    /**
+     * Идентификация пользователя
+     *
+     * @return bool
+     */
+    public function isAccessAllowed(): bool
+    {
+        $users = new User($this->pdo);
+
+        if (isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' && $users->isGetElementComplited($_SERVER['PHP_AUTH_USER']) === true) {
+            $this->statment = $users->getStatment();
+
+            if ($this->statment !== null) {
+                $users = $this->statment->fetch(\PDO::FETCH_ASSOC);
+
+                if ($users['user_id'] === (string) $this->getId()) {
+                    $this->logger->debug('Access is allowed.');
+                    return true;
+                }
+            }
+        }
+        $this->logger->debug('Access denied');
+
+        http_response_code(404);
+        $this->response = json_encode([
+            'status' => false,
+            'message' => 'Not Found.'
+        ]);
+        return false;    
+    }
+
+    /**
+     * Идентификация автора
+     *
+     * @return bool
+     */
+    public function isAuthor(): bool
+    {
+        $authors = new Author($this->pdo);
+
+        if (isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' && $authors->isGetElementComplited($_SERVER['PHP_AUTH_USER']) === true) {
+            $this->statment = $authors->getStatment();
+            
+            if ($this->statment !== null) {
+                $authors = $this->statment->fetch(\PDO::FETCH_ASSOC);
+
+                if ($authors['user_id'] === (string) $_SERVER['PHP_AUTH_USER']) {
+                    $this->logger->debug('Access is allowed.');
+                    return true;
+                }
+            }
+        }
+        $this->logger->debug('Access denied');
+
+        http_response_code(404);
+        $this->response = json_encode([
+            'status' => false,
+            'message' => 'Not Found.'
+        ]);
+        return false;    
+    }
+
+    /**
+     * Получить ответ
+     *
+     * @return string
+     */
+    public function getResponse()
+    {
+        return $this->response;
+    }
+    
+    /**
+     * @return object
+     */
+    public function getStatment(): object
+    {
+        return $this->statment;
+    }
 }

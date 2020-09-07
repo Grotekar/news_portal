@@ -10,30 +10,30 @@ interface TableInterface
     /**
      * Обработка GET-запроса.
      *
-     * @return string
+     * @return void
      */
-    public function processingGetRequest(): string;
+    public function processingGetRequest(): void;
 
     /**
      * Обработка POST-запроса.
      *
-     * @return string
+     * @return bool
      */
-    public function createElement(): string;
+    public function createElement(): bool;
 
     /**
      * Обработка PUT-запроса
      *
      * @param array $putParams
      *
-     * @return string
+     * @return void
      */
-    public function updateElement($putParams): string;
+    public function updateElement($putParams): void;
 
     /**
      * Обработка DELETE-запроса
      *
-     * @return string
+     * @return void
      */
-    public function deleteElement(): string;
+    public function deleteElement(): void;
 }

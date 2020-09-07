@@ -10,10 +10,9 @@ use Psr\Log\LoggerInterface;
 /**
  * Класс подготавливает SQL-запросы.
  */
-class Category extends AbstractTable
+class Tag extends AbstractTable
 {
-    private PDO $pdo;
-    private string $tableName = 'tags';
+    protected PDO $pdo;
     protected LoggerInterface $logger;
     
     /**
@@ -25,6 +24,15 @@ class Category extends AbstractTable
         $this->pdo = $pdo;
     }
 
+    /**
+     * Подготовка данных перед выдачей
+     *
+     * @return void
+     */
+    public function processingGetRequest(): void
+    {
+        $this->isGetRequestSuccess();
+    }
     /**
      * Запрос для получения всех элементов
      *
@@ -48,7 +56,9 @@ class Category extends AbstractTable
     {
         $query = "SELECT * FROM tags WHERE tag_id=(:tag_id)";
         $this->statment = $this->pdo->prepare($query);
+        
         $this->statment->bindParam(":tag_id", $id);
+        
         $status = $this->statment->execute();
 
         return $status;
@@ -71,17 +81,17 @@ class Category extends AbstractTable
     /**
      * Запрос на создание элемента
      *
+     * @param array $postParams
+     *
      * @return bool
      */
     public function isCreateElementCompleted(array $postParams): bool
-    {    
+    {
         $query = "INSERT INTO tags (name) 
                 VALUES (:name)";
         $this->statment = $this->pdo->prepare($query);
 
-        $newPostParamName = iconv('CP1251', 'UTF-8', $_POST['name']);
-
-        $this->statment->bindParam(':name', $newPostParamName);
+        $this->statment->bindParam(':name', $postParams['name']);
 
         $status = $this->statment->execute();
 
@@ -103,9 +113,7 @@ class Category extends AbstractTable
             WHERE tag_id = :tag_id";
         $this->statment = $this->pdo->prepare($query);
 
-        $newPutParamAName = iconv('CP1251', 'UTF-8', $putParams['name']);
-        
-        $this->statment->bindParam(':name', $newPutParamName);
+        $this->statment->bindParam(':name', $putParams['name']);
         $this->statment->bindParam(':tag_id', $id);
 
         $status = $this->statment->execute();
@@ -124,6 +132,7 @@ class Category extends AbstractTable
     {
         $query = "DELETE FROM tags WHERE tag_id = :tag_id";
         $statment = $this->pdo->prepare($query);
+        
         $statment->bindParam(':tag_id', $id);
 
         $status = $this->statment->execute();
