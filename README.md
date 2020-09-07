@@ -31,6 +31,7 @@
 с аргументом **--help**, либо **-h**, чтобы узнать список возможных аргументов.
 - Руководствуясь примерами запросов в каталоге [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
 можно составлять запросы к таблицам базы данных. sh-скрипты покрывают всевозможные cURL-запросы. Ответ выводится в JSON-формате.
+- Некоторые запросы доступны только с определенными правами, которые можно получить только по id пользователя.
 
 ## 5. Тестирование
 
@@ -43,26 +44,46 @@
 хранятся тесты запросов к таблицам **users** и **news**.
 ## 6. Описание файлов
 
-### [api/users/index.php](https://github.com/Grotekar/news_portal/blob/master/api/users/index.php)
-Точка входа для запросов к таблице **users**.
+### [api/authors/index.php](https://github.com/Grotekar/news_portal/blob/master/api/authors/index.php)
+Точка входа для запросов к таблице **authors**.
 
 Поддерживаются запросы:
-* GET: получить все строки таблицы **users**, получить строку таблицы **users** по **user_id**;
-* POST: создать строку в таблицу **users**;
-* PUT: обновить строку таблицы **users** по **user_id**;
-* DELETE: удалить строку таблицы **users** по **user_id**.
+* GET: получить все строки таблицы **authors**, получить строку таблицы **authors** по **author_id** 
+*(доступно только администраторам)*;
+* POST: создать строку в таблицу **authors** *(доступно только администраторам)*;
+* PUT: обновить строку таблицы **authors** по **author_id** *(доступно только администраторам)*;
+* DELETE: удалить строку таблицы **authors** по **author_id** *(доступно только администраторам)*.
 
-### [api/User.php](https://github.com/Grotekar/news_portal/blob/master/api/User.php)
-Класс подготавливает SQL-запросы к таблице **users**.
+### [api/Author.php](https://github.com/Grotekar/news_portal/blob/master/api/Author.php)
+Класс подготавливает SQL-запросы к таблице **authors**.
+
+Также подготавливает ответ для запроса, который получается с подстановкой идентификатора значением, например, вместо
+идентификатора категории будет получено название категории с родительской категорией. 
+
+Категория новости - последний элемент массива **authors**, потому что является дочерним.
+
+### [api/categories/index.php](https://github.com/Grotekar/news_portal/blob/master/api/categories/index.php)
+Точка входа для запросов к таблице **categories**.
+
+Поддерживаются запросы:
+* GET: получить все строки таблицы **categories**, получить строку таблицы **categories** по **category_id** 
+*(доступно всем пользователям)*;
+* POST: создать строку в таблицу **categories** *(доступно только администраторам)*;
+* PUT: обновить строку таблицы **categories** по **category_id** *(доступно только администраторам)*;
+* DELETE: удалить строку таблицы **categories** по **category_id** *(доступно только администраторам)*.
+
+### [api/Category.php](https://github.com/Grotekar/news_portal/blob/master/api/Category.php)
+Класс подготавливает SQL-запросы к таблице **categories**.
 
 ### [api/news/index.php](https://github.com/Grotekar/news_portal/blob/master/api/news/index.php)
 Точка входа для запросов к таблице **news**.
 
 Поддерживаются запросы:
-* GET: получить все строки таблицы **news**, получить строку таблицы **news** по **news_id** ;
-* POST: создать строку в таблицу **news**;
-* PUT: обновить строку таблицы **news** по **news_id**;
-* DELETE: удалить строку таблицы **news** по **news_id**.
+* GET: получить все строки таблицы **news**, получить строку таблицы **news** по **news_id** 
+*(доступно всем пользователям)*;
+* POST: создать строку в таблицу **news** *(доступно только авторам)*;
+* PUT: обновить строку таблицы **news** по **news_id** *(доступно только авторам)*;
+* DELETE: удалить строку таблицы **news** по **news_id** *(доступно только авторам)*.
 
 ### [api/News.php](https://github.com/Grotekar/news_portal/blob/master/api/News.php)
 Класс подготавливает SQL-запросы к таблице **news**.
@@ -72,29 +93,32 @@
 
 Категория новости - последний элемент массива **categories**, потому что является дочерним.
 
-### [api/categories/index.php](https://github.com/Grotekar/news_portal/blob/master/api/categories/index.php)
-Точка входа для запросов к таблице **categories**.
-
-Поддерживаются запросы:
-* GET: получить все строки таблицы **categories**, получить строку таблицы **categories** по **category_id** ;
-* POST: создать строку в таблицу **categories**;
-* PUT: обновить строку таблицы **categories** по **category_id**;
-* DELETE: удалить строку таблицы **categories** по **category_id**.
-
-### [api/Category.php](https://github.com/Grotekar/news_portal/blob/master/api/Category.php)
-Класс подготавливает SQL-запросы к таблице **categories**.
-
 ### [api/tags/index.php](https://github.com/Grotekar/news_portal/blob/master/api/tags/index.php)
 Точка входа для запросов к таблице **tags**.
 
 Поддерживаются запросы:
-* GET: получить все строки таблицы **tags**, получить строку таблицы **tags** по **tag_id** ;
-* POST: создать строку в таблицу **tags**;
-* PUT: обновить строку таблицы **tags** по **tag_id**;
-* DELETE: удалить строку таблицы **tags** по **tag_id**.
+* GET: получить все строки таблицы **tags**, получить строку таблицы **tags** по **tag_id** 
+*(доступно всем пользователям)*;
+* POST: создать строку в таблицу **tags** *(доступно только администраторам)*;
+* PUT: обновить строку таблицы **tags** по **tag_id** *(доступно только администраторам)*;
+* DELETE: удалить строку таблицы **tags** по **tag_id** *(доступно только администраторам)*.
 
 ### [api/Tag.php](https://github.com/Grotekar/news_portal/blob/master/api/Tag.php)
 Класс подготавливает SQL-запросы к таблице **tags**.
+
+### [api/users/index.php](https://github.com/Grotekar/news_portal/blob/master/api/users/index.php)
+Точка входа для запросов к таблице **users**.
+
+Поддерживаются запросы:
+* GET: получить все строки таблицы **users**, получить строку таблицы **users** по **user_id**
+*(доступно всем пользователям)*;
+* POST: создать строку в таблицу **users** *(доступно всем пользователям)*;
+* PUT: обновить строку таблицы **users** по **user_id** 
+*(пользователь может редактировать только свою строку по id)*;
+* DELETE: удалить строку таблицы **users** по **user_id** *(доступно только администраторам)*.
+
+### [api/User.php](https://github.com/Grotekar/news_portal/blob/master/api/User.php)
+Класс подготавливает SQL-запросы к таблице **users**.
 
 ### [api/AbstractTable.php](https://github.com/Grotekar/news_portal/blob/master/api/AbstractTable.php)
 Абсрактный класс содержит реализацию основных API-запросов (GET, POST, PUT и DELETE) ко всем таблицам.
