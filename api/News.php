@@ -31,7 +31,35 @@ class News extends AbstractTable
      */
     public function processingGetRequest(): void
     {
-        if ($this->isGetRequestSuccess() === true) {
+        // Если
+        // запрос к новости выполняется успешно и
+        // существует дополнение к пути и
+        // это дополнение равно comments
+        if (
+            $this->isGetRequestSuccess() === true &&
+            isset($this->getParamsRequest()[4]) === true &&
+            $this->getParamsRequest()[4] === 'comments'
+        ) {
+            $response = json_decode($this->response);
+
+            // Если поле статус не существует (значит, новость есть),
+            // то получить комментарии к новости
+            if (!isset($response->status)) {
+                $comments = new Comment($this->pdo);
+                
+                // Если нужно получить по id, либо всё
+                if (
+                    isset($comments->getParamsRequest()[5]) === true &&
+                    $comments->getParamsRequest()[5] !== ''
+                ) {
+                    $comments->isGetElement($comments->getParamsRequest()[5]);
+                } else {
+                    $comments->isGetAll();
+                }
+
+                $this->response = $comments->getResponse();
+            }
+        } elseif ($this->isGetRequestSuccess() === true) {
             if ($this->statment->rowCount() !== 0) {
                 // Получение данных новостей
                 $preliminaryDataFromNews = $this->response;
@@ -54,8 +82,6 @@ class News extends AbstractTable
                 // Получение результата
                 $this->response = json_encode($listOfNewsArray);
             }
-        } else {
-            $this->response;
         }
     }
 
@@ -70,10 +96,10 @@ class News extends AbstractTable
     {
         // Получение категорий через API
         $categories = new Category($this->pdo);
-        $categories->processingGetRequest();
-        $listOfCategoriesJson = $categories->getResponse();
+        $categories->isGetAllComplited();
+        $statmentOfCategories = $categories->getStatment();
 
-        $listOfCategoriesArray = json_decode($listOfCategoriesJson);
+        $listOfCategories = $statmentOfCategories->fetchAll(\PDO::FETCH_ASSOC);
 
         // Для каждой новости...
         foreach ($listOfNews as $key => $newsElement) {
@@ -81,25 +107,26 @@ class News extends AbstractTable
             $parentCategoryId = null;
             $categoriesOfNewsElement = null;
             $categoryName = '';
+            
             // Получить первую категорию с подкатегорией
-            for ($i = 0; $i < count($listOfCategoriesArray); $i++) {
-                if ($listOfCategoriesArray[$i]->category_id === $newsElement->category_id) {
-                    $categoryName = $listOfCategoriesArray[$i]->name;
+            for ($i = 0; $i < count($listOfCategories); $i++) {
+                if ($listOfCategories[$i]['category_id'] === $newsElement->category_id) {
+                    $categoryName = $listOfCategories[$i]['name'];
                     $categoriesOfNewsElement[] = $categoryName;
-                    $parentCategoryId = $listOfCategoriesArray[$i]->parent_category;
+                    $parentCategoryId = $listOfCategories[$i]['parent_category'];
                 }
             }
 
             // Пока есть родительская, создавать вложенные категории
             while ($parentCategoryId !== null) {
-                for ($i = 0; $i < count($listOfCategoriesArray); $i++) {
-                    if ($listOfCategoriesArray[$i]->category_id === $parentCategoryId) {
+                for ($i = 0; $i < count($listOfCategories); $i++) {
+                    if ($listOfCategories[$i]['category_id'] === $parentCategoryId) {
                         // Запомнить имя найденной категории
-                        $parentCategoryName = $listOfCategoriesArray[$i]->name;
+                        $parentCategoryName = $listOfCategories[$i]['name'];
                         // Поместить в начало массива
                         array_unshift($categoriesOfNewsElement, $parentCategoryName);
                         // Получить следующий id родительской новости
-                        $parentCategoryId = $listOfCategoriesArray[$i]->parent_category;
+                        $parentCategoryId = $listOfCategories[$i]['parent_category'];
                     }
                 }
             }
@@ -198,6 +225,8 @@ class News extends AbstractTable
         $additionalTable = '';
         $orderBy = ' ORDER BY ';
         $orderByArg = '';
+        $pagination = ' LIMIT ';
+        $paginationArg = '';
 
         // Фильтры
         if (
@@ -376,6 +405,12 @@ class News extends AbstractTable
                 }
             } */
         }
+
+        // Пагинация
+        if (array_key_exists('pagination', $_GET)) {
+             // Разобрать аргументы
+            $paginationArg = substr($_GET['pagination'], 1, -1);
+        }
         
         if ($filterArg === '') {
             $filter = '';
@@ -383,6 +418,10 @@ class News extends AbstractTable
 
         if ($orderByArg === '') {
             $orderBy = '';
+        }
+
+        if ($paginationArg === '') {
+            $pagination = '';
         }
 
         $query = "SELECT
@@ -396,14 +435,13 @@ class News extends AbstractTable
                         n.main_image
                 FROM news n
                     JOIN users u
-                        ON n.author_id = u.user_id"
-                . $additionalTable
-                . $filter . $filterArg
-                . $groupBy . $groupByArg
-                . $orderBy . $orderByArg;
+                        ON n.author_id = u.user_id" .
+                $additionalTable .
+                $filter . $filterArg .
+                $groupBy . $groupByArg .
+                $orderBy . $orderByArg .
+                $pagination . $paginationArg;
         $this->statment = $this->pdo->prepare($query);
-
-        // print_r($this->statment);
 
         $status = $this->statment->execute();
 
@@ -444,6 +482,42 @@ class News extends AbstractTable
             return true;
         } else {
             return false;
+        }
+    }
+
+    /**
+     * Обработка POST-запроса
+     *
+     * @return void
+     */
+    public function processingPostRequest(): void
+    {
+        // Если
+        // запрос к новости выполняется успешно и
+        // существует дополнение к пути и
+        // это дополнение равно comments
+        if (
+            $this->isGetRequestSuccess() === true &&
+            isset($this->getParamsRequest()[4]) === true &&
+            $this->getParamsRequest()[4] === 'comments'
+        ) {
+            // Если пользователь есть в таблице пользователей
+            
+            if ($this->isAccessAllowedToComments() === true) {
+                $response = json_decode($this->getResponse());
+
+                // Если поле статус не существует (значит, новость есть),
+                // то создать комментарии к новости
+                if (!isset($response->status)) {
+                    $comments = new Comment($this->pdo);
+                    
+                    $comments->createElement();
+
+                    $this->response = $comments->getResponse();
+                }
+            }
+        } elseif ($this->isAuthor() === true) {
+            $this->createElement();
         }
     }
 
@@ -500,13 +574,48 @@ class News extends AbstractTable
     }
 
     /**
+     * Обработка DELETE-запроса
+     *
+     * @return void
+     */
+    public function processingDeleteRequest(): void
+    {
+        // Если
+        // запрос к новости выполняется успешно и
+        // существует дополнение к пути и
+        // это дополнение равно comments
+        if (
+            $this->isGetRequestSuccess() === true &&
+            isset($this->getParamsRequest()[4]) === true &&
+            $this->getParamsRequest()[4] === 'comments'
+        ) {
+            // Если пользователь удаляет свой комментарий
+            if ($this->isAccessAllowedToComment() === true) {
+                $response = json_decode($this->getResponse());
+
+                // Если поле статус не существует (значит, комментарий есть),
+                // то удалить комментарий к новости
+                if (!isset($response->status)) {
+                    $comments = new Comment($this->pdo);
+                    
+                    $comments->deleteElement(5);
+
+                    $this->response = $comments->getResponse();
+                }
+            }
+        } elseif ($this->isAuthor() === true) {
+            $this->deleteElement();
+        }
+    }
+
+    /**
      * Запрос на удаление элемента
      *
      * @param int $id
      *
      * @return bool
      */
-    public function isDeleteteElementCompleted(int $id): bool
+    public function isDeleteElementCompleted(int $id): bool
     {
         $query = "DELETE FROM news WHERE news_id = :news_id";
         $this->statment = $this->pdo->prepare($query);
@@ -518,10 +627,87 @@ class News extends AbstractTable
     }
 
     /**
-     * @return int
+     * Идентификация пользователя для доступа к таблице comments
+     * к своему комментарию
+     *
+     * @return bool
      */
-    protected function getId(): int
+    public function isAccessAllowedToComment(): bool
     {
-        return (int) substr($_SERVER['REQUEST_URI'], 10);
+        $comments = new Comment($this->pdo);
+
+        // Если есть id пользователя в запросе и он не пуст
+        // и есть id комментария
+        // и удалось получить комментарий
+        if (
+            isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' &&
+            isset($this->getParamsRequest()[5]) &&
+            $comments->isGetElementComplited($this->getParamsRequest()[5]) === true
+        ) {
+            $newsId = $this->getParamsRequest()[3];
+
+            $query = "SELECT *
+                    FROM comments 
+                    WHERE news_id = (:news_id) AND comment_id = (:comment_id)";
+            $this->statment = $this->pdo->prepare($query);
+
+            $this->statment->bindParam(":news_id", $this->getParamsRequest()[3]);
+            $this->statment->bindParam(":comment_id", $this->getParamsRequest()[5]);
+
+            $this->statment->execute();
+            
+            if ($this->statment !== null) {
+                $comment = $this->statment->fetch(\PDO::FETCH_ASSOC);
+
+                if ($comment['user_id'] === (string) $_SERVER['PHP_AUTH_USER']) {
+                    $this->logger->debug('Access is allowed.');
+                    return true;
+                } else {
+                    $this->logger->debug('Access denied');
+                }
+            }
+        }
+
+        http_response_code(404);
+        $this->response = json_encode([
+            'status' => false,
+            'message' => 'Not Found.'
+        ]);
+        return false;
+    }
+
+    /**
+     * Идентификация пользователя для доступа к таблице comments
+     *
+     * @return bool
+     */
+    public function isAccessAllowedToComments(): bool
+    {
+        $users = new User($this->pdo);
+
+        if (
+            isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' &&
+            $users->isGetElementComplited($_SERVER['PHP_AUTH_USER']) === true
+        ) {
+            $this->statment = $users->getStatment();
+
+            if ($this->statment !== null) {
+                $users = $this->statment->fetch(\PDO::FETCH_ASSOC);
+
+                if ($users['user_id'] === $_SERVER['PHP_AUTH_USER']) {
+                    $this->logger->debug('Access is allowed.');
+                    return true;
+                } else {
+                    $this->logger->debug('Access denied');
+                }
+            }
+        }
+
+        http_response_code(404);
+        $this->response = json_encode([
+            'status' => false,
+            'message' => 'Not Found.'
+        ]);
+        return false;
     }
 }

@@ -10,10 +10,9 @@ use Psr\Log\LoggerInterface;
 /**
  * Класс подготавливает SQL-запросы.
  */
-class Author extends AbstractTable
+class Comment extends AbstractTable
 {
     protected PDO $pdo;
-    protected string $tableName = 'authors';
     protected LoggerInterface $logger;
     
     /**
@@ -37,60 +36,57 @@ class Author extends AbstractTable
     }
 
     /**
-     * Запрос для получения всех элементов
+     * Запрос для получения всех элементов (все комментарии новости)
      *
      * @return bool
      */
     public function isGetAllComplited(): bool
     {
-        $pagination = ' LIMIT ';
-        $paginationArg = '';
-        
-        // Пагинация
-        if (array_key_exists('pagination', $_GET)) {
-            // Разобрать аргументы
-            $paginationArg = substr($_GET['pagination'], 1, -1);
-        }
+        $newsId = $this->getParamsRequest()[3];
 
-        $query = "SELECT u.user_id,
-                        u.firstname,
-                        u.lastname,
-                        u.avatar,
-                        u.created,
-                        u.is_admin,
-                        a.description
-                FROM users u
-                JOIN authors a
-                    ON u.user_id = a.user_id" .
-                $pagination . $paginationArg;
+        $query = "SELECT c.comment_id,
+                         c.news_id,
+                         u.firstname,
+                         u.lastname,
+                         c.created,
+                         c.text
+                FROM comments c
+                    JOIN users u
+                        ON c.user_id = u.user_id
+                WHERE news_id = :news_id";
         $this->statment = $this->pdo->prepare($query);
+
+        $this->statment->bindParam(':news_id', $newsId);
+
         $status = $this->statment->execute();
 
         return $status;
     }
 
     /**
-     * Запрос для получения элемента
+     * Запрос для получения элемента (получение комментариев новости)
      *
      * @return bool
      */
     public function isGetElementComplited(int $id): bool
     {
-        $query = "SELECT u.user_id,
-                        u.firstname,
-                        u.lastname,
-                        u.avatar,
-                        u.created,
-                        u.is_admin,
-                        a.description
-                FROM users u
-                JOIN authors a
-                    ON u.user_id = a.user_id
-                WHERE a.user_id = (:user_id)";
+        $newsId = $this->getParamsRequest()[3];
+
+        $query = "SELECT c.comment_id,
+                         c.news_id,
+                         u.firstname,
+                         u.lastname,
+                         c.created,
+                         c.text
+                FROM comments c
+                    JOIN users u
+                        ON c.user_id = u.user_id
+                WHERE news_id = (:news_id) AND comment_id = (:comment_id)";
         $this->statment = $this->pdo->prepare($query);
-        
-        $this->statment->bindParam(":user_id", $id);
-        
+
+        $this->statment->bindParam(":news_id", $newsId);
+        $this->statment->bindParam(":comment_id", $id);
+
         $status = $this->statment->execute();
 
         return $status;
@@ -104,8 +100,7 @@ class Author extends AbstractTable
     protected function isExistsParamsInArray(array $params): bool
     {
         if (
-            array_key_exists('user_id', $params) &&
-            array_key_exists('description', $params)
+            array_key_exists('text', $params)
         ) {
             return true;
         } else {
@@ -122,16 +117,21 @@ class Author extends AbstractTable
      */
     public function isCreateElementCompleted(array $postParams): bool
     {
-        $query = "INSERT INTO authors (user_id, description) 
-                VALUES (:user_id, :description)";
+        $newsId = $this->getParamsRequest()[3];
+
+        $query = "INSERT INTO comments (news_id, user_id, text) 
+                VALUES (:news_id, :user_id, :text)";
         $this->statment = $this->pdo->prepare($query);
 
-        $this->statment->bindParam(':description', $postParams['description']);
+        $this->statment->bindParam(':news_id', $newsId);
+        $this->statment->bindParam(':user_id', $_SERVER['PHP_AUTH_USER']);
+        $this->statment->bindParam(':text', $postParams['text']);
 
         $status = $this->statment->execute();
 
         return $status;
     }
+
     
     /**
      * Запрос для обновления элемента
@@ -143,12 +143,16 @@ class Author extends AbstractTable
      */
     public function isUpdateElementCompleted(int $id, array $putParams): bool
     {
-        $query = "UPDATE authors SET
-                description = :description WHERE user_id = :user_id";
+        $query = "UPDATE comments SET
+                news_id = :news_id, user_id = :user_id, text = :text
+                WHERE comment_id = :comment_id";
         $this->statment = $this->pdo->prepare($query);
         
-        $this->statment->bindParam(':description', $putParams['description']);
-        $this->statment->bindParam(':user_id', $id);
+        $this->statment->bindParam(':news_id', $putParams['news_id']);
+        $this->statment->bindParam(':user_id', $putParams['user_id']);
+        $this->statment->bindParam(':text', $putParams['text']);
+
+        $this->statment->bindParam(':comment_id', $id);
         
         $status = $this->statment->execute();
 
@@ -164,10 +168,9 @@ class Author extends AbstractTable
      */
     public function isDeleteElementCompleted(int $id): bool
     {
-        $query = "DELETE FROM authors WHERE user_id = :user_id";
+        $query = "DELETE FROM comments WHERE comment_id = :comment_id";
         $this->statment = $this->pdo->prepare($query);
-
-        $this->statment->bindParam(':user_id', $id);
+        $this->statment->bindParam(':comment_id', $id);
 
         $status = $this->statment->execute();
 

@@ -41,7 +41,18 @@ class Category extends AbstractTable
      */
     public function isGetAllComplited(): bool
     {
-        $query = "SELECT * FROM categories";
+        $pagination = ' LIMIT ';
+        $paginationArg = '';
+        
+        // Пагинация
+        if (array_key_exists('pagination', $_GET)) {
+            // Разобрать аргументы
+            $paginationArg = substr($_GET['pagination'], 1, -1);
+        }
+
+        $query = "SELECT * FROM categories" .
+                $pagination . $paginationArg;
+                
         $this->statment = $this->pdo->prepare($query);
         $status = $this->statment->execute();
 
@@ -133,7 +144,7 @@ class Category extends AbstractTable
      *
      * @return bool
      */
-    public function isDeleteteElementCompleted(int $id): bool
+    public function isDeleteElementCompleted(int $id): bool
     {
         $query = "DELETE FROM categories WHERE category_id = :category_id";
         $this->statment = $this->pdo->prepare($query);
@@ -143,13 +154,5 @@ class Category extends AbstractTable
         $status = $this->statment->execute();
 
         return $status;
-    }
-
-    /**
-     * @return int
-     */
-    protected function getId(): int
-    {
-        return (int) substr($_SERVER['REQUEST_URI'], 16);
     }
 }

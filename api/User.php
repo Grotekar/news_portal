@@ -42,7 +42,18 @@ class User extends AbstractTable
      */
     public function isGetAllComplited(): bool
     {
-        $query = "SELECT * FROM users";
+        $pagination = ' LIMIT ';
+        $paginationArg = '';
+        
+        
+        // Пагинация
+        if (array_key_exists('pagination', $_GET)) {
+            // Разобрать аргументы
+            $paginationArg = substr($_GET['pagination'], 1, -1);
+        }
+
+        $query = "SELECT * FROM users" .
+                    $pagination . $paginationArg;
         $this->statment = $this->pdo->prepare($query);
         $status = $this->statment->execute();
 
@@ -142,7 +153,7 @@ class User extends AbstractTable
      *
      * @return bool
      */
-    public function isDeleteteElementCompleted(int $id): bool
+    public function isDeleteElementCompleted(int $id): bool
     {
         $query = "DELETE FROM users WHERE user_id = :user_id";
         $this->statment = $this->pdo->prepare($query);
@@ -152,12 +163,39 @@ class User extends AbstractTable
 
         return $status;
     }
-
+    
     /**
-     * @return int
+     * Идентификация пользователя (есть ли он в таблице users)
+     *
+     * @return bool
      */
-    protected function getId(): int
+    public function isAccessAllowed(): bool
     {
-        return (int) substr($_SERVER['REQUEST_URI'], 11);
+        $users = new User($this->pdo);
+
+        if (
+            isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' &&
+            $users->isGetElementComplited($_SERVER['PHP_AUTH_USER']) === true
+        ) {
+            $this->statment = $users->getStatment();
+
+            if ($this->statment !== null) {
+                $users = $this->statment->fetch(\PDO::FETCH_ASSOC);
+
+                if ($users['user_id'] === (string) $this->getParamsRequest()[3]) {
+                    $this->logger->debug('Access is allowed.');
+                    return true;
+                } else {
+                    $this->logger->debug('Access denied');
+                }
+            }
+        }
+
+        http_response_code(404);
+        $this->response = json_encode([
+            'status' => false,
+            'message' => 'Not Found.'
+        ]);
+        return false;
     }
 }

@@ -21,9 +21,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $news->processingGetRequest();
         break;
     case 'POST':
-        if ($news->isAuthor() === true) {
-            $news->createElement();
-        }
+        $news->processingPostRequest();
         break;
     case 'PUT':
         if ($news->isAuthor() === true) {
@@ -32,9 +30,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         }
         break;
     case 'DELETE':
-        if ($news->isAuthor() === true) {
-            $news->deleteElement();
-        }
+        $news->processingDeleteRequest();
         break;
     default:
         echo json_encode([
