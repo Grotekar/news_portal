@@ -32,7 +32,8 @@
 - Руководствуясь примерами запросов в каталоге [curl_query](https://github.com/Grotekar/news_portal/blob/master/curl_query)
 можно составлять запросы к таблицам базы данных. sh-скрипты покрывают всевозможные cURL-запросы. Ответ выводится в JSON-формате.
 - Некоторые запросы доступны только с определенными правами, которые можно получить только по id пользователя.
-
+- Поддерживается пагинация (например, `.../news?pagination=[0,5]`, что означает вывод с 0 элемента с шагом 5).
+В скобках может быть и одна цифра, которая означает вывод первых ***n*** элементов.
 ## 5. Тестирование
 
 Каталог [testDump](https://github.com/Grotekar/news_portal/blob/master/testDump)
@@ -74,6 +75,15 @@
 
 ### [api/Category.php](https://github.com/Grotekar/news_portal/blob/master/api/Category.php)
 Класс подготавливает SQL-запросы к таблице **categories**.
+
+### [api/Comments.php](https://github.com/Grotekar/news_portal/blob/master/api/Comments.php)
+Класс подготавливает SQL-запросы к таблице **comments**.
+
+Поддерживаются запросы:
+* GET: получить все строки таблицы **comments**, получить строку таблицы **comments** по **comment_id** 
+*(доступно всем пользователям)*;
+* POST: создать строку в таблицу **comments** *(доступно только администраторам)*;
+* DELETE: удалить строку таблицы **comments** по **comment_id** *(доступно только администраторам)*.
 
 ### [api/news/index.php](https://github.com/Grotekar/news_portal/blob/master/api/news/index.php)
 Точка входа для запросов к таблице **news**.
