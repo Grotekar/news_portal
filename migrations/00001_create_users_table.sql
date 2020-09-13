@@ -4,7 +4,7 @@ create table if not exists `users` (
     `lastname` varchar(255) not null,
     `avatar` varchar(255) not null,
     `created` timestamp not null default now(),
-    `is_admin` boolean not null,
+    `is_admin` boolean not null default false,
     primary key (user_id)
 )
 engine = innodb
