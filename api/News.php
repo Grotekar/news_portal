@@ -227,6 +227,8 @@ class News extends AbstractTable
         $orderByArg = '';
         $pagination = ' LIMIT ';
         $paginationArg = '';
+        $having = ' HAVING ';
+        $havingArg = '';
 
         // Фильтры
         if (
@@ -237,6 +239,7 @@ class News extends AbstractTable
             array_key_exists('category_id', $_GET) ||
             array_key_exists('tag_id', $_GET) ||
             array_key_exists('tag__in', $_GET) ||
+            array_key_exists('tag__all', $_GET) ||
             array_key_exists('article', $_GET) ||
             array_key_exists('content', $_GET)
         ) {
@@ -280,29 +283,31 @@ class News extends AbstractTable
             } elseif (array_key_exists('tag__in', $_GET)) {
                 $additionalTable = $additionalTable . " JOIN news_has_tag
                                         ON n.news_id = news_has_tag.news_id";
+                
+                // Разобрать аргументы
+                $resultArgs = substr($_GET['tag__in'], 1, -1);
 
                 if ($filterArg !== '') {
-                    $filterArg = $filterArg . " AND news_has_tag.tag_id IN {$_GET['tag__in']}";
+                    $filterArg = $filterArg . " AND news_has_tag.tag_id IN ({$resultArgs})";
                 } else {
-                    $filterArg = $filterArg . "news_has_tag.tag_id IN {$_GET['tag__in']}";
+                    $filterArg = $filterArg . "news_has_tag.tag_id IN ({$resultArgs})";
                 }
-            } /* elseif (array_key_exists('tag__all', $_GET)) {
+            } elseif (array_key_exists('tag__all', $_GET)) {
                 $additionalTable = " JOIN news_has_tag
                                         ON n.news_id = news_has_tag.news_id";
 
                 // Разобрать аргументы
-                $argsInString = substr($_GET['tag__all'], 1, -1);
-                $resultArgs = str_replace(',', ' AND ');
+                $resultArgs = substr($_GET['tag__all'], 1, -1);
+                $countArgs = count(explode(',', $resultArgs));
 
-                /* print_r($tempArgsInString);
-                exit; */
-            /*
                 if ($filterArg !== '') {
-                    $filterArg = $filterArg . " AND news_has_tag.tag_id IN {$_GET['tag__in']}";
+                    $filterArg = $filterArg . " AND news_has_tag.tag_id IN ({$resultArgs})";
                 } else {
-                    $filterArg = $filterArg . "news_has_tag.tag_id IN {$_GET['tag__in']}";
+                    $filterArg = $filterArg . "news_has_tag.tag_id IN ({$resultArgs})";
                 }
-            } */
+
+                $havingArg = "COUNT(news_has_tag.tag_id) = " . $countArgs;
+            }
 
             // Фильтр по вхождению в названии статьи
             if (array_key_exists('article', $_GET)) {
@@ -389,9 +394,9 @@ class News extends AbstractTable
                 }
             }
 
-            /* if ($_GET['sort'] === 'image') {
+            if ($_GET['sort'] === 'images_asc') {
                 // Проверить была ли уже добавлена таблица images
-                $table = " JOIN images c
+                $table = " JOIN images
                                 ON images.news_id = n.news_id";
                 $pos = stripos($additionalTable, $table);
                 if ($pos === false) {
@@ -399,11 +404,25 @@ class News extends AbstractTable
                 }
 
                 if ($orderByArg !== '') {
-                    $orderByArg = $orderByArg . ', c.name';
+                    $orderByArg = $orderByArg . ', COUNT(images.image_id)';
                 } else {
-                    $orderByArg = "c.name";
+                    $orderByArg = "COUNT(images.image_id)";
                 }
-            } */
+            } elseif ($_GET['sort'] === 'images_desc') {
+                // Проверить была ли уже добавлена таблица images
+                $table = " JOIN images
+                                ON images.news_id = n.news_id";
+                $pos = stripos($additionalTable, $table);
+                if ($pos === false) {
+                    $additionalTable = $additionalTable . $table;
+                }
+
+                if ($orderByArg !== '') {
+                    $orderByArg = $orderByArg . ', COUNT(images.image_id) DESC';
+                } else {
+                    $orderByArg = "COUNT(images.image_id) DESC";
+                }
+            }
         }
 
         // Пагинация
@@ -424,6 +443,10 @@ class News extends AbstractTable
             $pagination = '';
         }
 
+        if ($havingArg === '') {
+            $having = '';
+        }
+
         $query = "SELECT
                         n.news_id,
                         n.article,
@@ -440,7 +463,8 @@ class News extends AbstractTable
                 $filter . $filterArg .
                 $groupBy . $groupByArg .
                 $orderBy . $orderByArg .
-                $pagination . $paginationArg;
+                $pagination . $paginationArg .
+                $having . $havingArg;
         $this->statment = $this->pdo->prepare($query);
 
         $status = $this->statment->execute();
