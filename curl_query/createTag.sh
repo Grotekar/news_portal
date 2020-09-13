@@ -1,2 +1,2 @@
 #!/bin/bash
-curl -i -X POST -d "name=cat" -u '1:' http://localhost:8000/api/tags
+curl -i -X POST -u '1:' -d "name=cat" http://localhost:8000/api/tags
