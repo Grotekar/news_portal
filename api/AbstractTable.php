@@ -22,9 +22,9 @@ abstract class AbstractTable implements TableInterface
     /**
      * Подготовка данных перед выдачей
      *
-     * @return string
+     * @return void
      */
-    //abstract public function processingGetRequest(): string;
+    abstract public function processingGetRequest(): void;
 
     /**
      * Обработка GET-запроса.
@@ -41,7 +41,11 @@ abstract class AbstractTable implements TableInterface
         $status = false;
 
         // Если нужно получить по id, либо всё
-        if (isset($this->getParamsRequest()[3]) && $this->getParamsRequest()[3] > 0) {
+        if (
+            isset($this->getParamsRequest()[3]) &&
+            $this->getParamsRequest()[3] !== '' &&
+            $this->getParamsRequest()[3] > 0
+        ) {
             $status = $this->isGetElement($this->getParamsRequest()[3]);
         } else {
             $status = $this->isGetAll();
@@ -167,10 +171,17 @@ abstract class AbstractTable implements TableInterface
                 ]);
             } else {
                 http_response_code(201);
-                $this->response = json_encode([
-                    'status' => true,
-                    'id' => $this->pdo->lastInsertId()
-                ]);
+                if ($this->pdo->lastInsertId() === '0') {
+                    $this->response = json_encode([
+                        'status' => true,
+                        'id' => 'Inherits.'
+                    ]);
+                } else {
+                    $this->response = json_encode([
+                        'status' => true,
+                        'id' => $this->pdo->lastInsertId()
+                    ]);
+                }
             }
         } else {
             http_response_code(400);
@@ -202,22 +213,20 @@ abstract class AbstractTable implements TableInterface
     /**
      * Обработка PUT-запроса
      * @param array $putParams
+     * @param int $id
      *
      * @return void
      */
-    public function updateElement($putParams): void
+    public function updateElement($putParams, $id): void
     {
         header("Access-Control-Allow-Origin: *");
         header("Access-Control-Allow-Methods: PUT");
         header("Access-Control-Max-Age: 3600");
         header("Access-Control-Allow-Headers: *");
 
-        // Получить идентификатор
-        $id = $this->getParamsRequest()[3];
-
         if ($this->isExistsParamsInArray($putParams)) {
             // Запрос к таблице
-            $status = $this->isUpdateElementCompleted($id, $putParams);
+            $status = $this->isUpdateElementCompleted($putParams, $id);
                         
             if ($status === false) {
                 $this->logger->error(
@@ -249,12 +258,12 @@ abstract class AbstractTable implements TableInterface
     /**
      * Запрос для обновления элемента
      *
-     * @param int $id
      * @param array $putParams - параметры запроса
+     * @param int $id
      *
      * @return bool
      */
-    abstract public function isUpdateElementCompleted(int $id, array $putParams): bool;
+    abstract public function isUpdateElementCompleted(array $putParams, int $id): bool;
 
     /**
      * Обработка DELETE-запроса
@@ -411,5 +420,19 @@ abstract class AbstractTable implements TableInterface
     public function getResponse(): string
     {
         return $this->response;
+    }
+
+    /**
+     * Ошибка 404
+     *
+     * @return void
+     */
+    public function getNotFound(): void
+    {
+        http_response_code(404);
+        $this->response = json_encode([
+            'status' => false,
+            'message' => 'Not Found.'
+        ]);
     }
 }

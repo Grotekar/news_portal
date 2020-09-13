@@ -52,6 +52,10 @@ class Author extends AbstractTable
             $paginationArg = substr($_GET['pagination'], 1, -1);
         }
 
+        if ($paginationArg === '') {
+            $pagination = '';
+        }
+
         $query = "SELECT u.user_id,
                         u.firstname,
                         u.lastname,
@@ -126,6 +130,7 @@ class Author extends AbstractTable
                 VALUES (:user_id, :description)";
         $this->statment = $this->pdo->prepare($query);
 
+        $this->statment->bindParam(':user_id', $postParams['user_id']);
         $this->statment->bindParam(':description', $postParams['description']);
 
         $status = $this->statment->execute();
@@ -136,12 +141,12 @@ class Author extends AbstractTable
     /**
      * Запрос для обновления элемента
      *
-     * @param int $id
      * @param array $putParams - параметры запроса
+     * @param int $id
      *
      * @return bool
      */
-    public function isUpdateElementCompleted(int $id, array $putParams): bool
+    public function isUpdateElementCompleted(array $putParams, int $id): bool
     {
         $query = "UPDATE authors SET
                 description = :description WHERE user_id = :user_id";

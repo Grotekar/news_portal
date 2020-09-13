@@ -4,7 +4,7 @@ namespace Models;
 namespace Api;
 
 use Models\Database as Database;
-use Api\User as User;
+use Api\Draft as Draft;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -13,29 +13,30 @@ header("Content-Type: application/json; charset=utf-8");
 $database = new Database();
 $pdo = $database->getConnect();
 
-$users = new User($pdo);
+$drafts = new Draft($pdo);
+$id = $drafts->getParamsRequest()[3];
 
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $users->processingGetRequest();
+        if ($drafts->isAuthor() === true) {
+            $drafts->processingGetRequest();
+        }
         break;
     case 'POST':
-        $users->createElement();
+        $drafts->processingPostRequest();
         break;
     case 'PUT':
-        if ($users->isAccessAllowed() === true) {
-            $userId = $users->getParamsRequest()[3];
+        if ($drafts->isAccessAllowed() === true) {
             parse_str(file_get_contents('php://input'), $putParams);
-            $users->updateElement($putParams, $userId);
+            $drafts->updateElement($putParams, $id);
         }
         break;
     case 'DELETE':
-        if ($users->isAdmin() === true) {
-            $users->deleteElement();
+        if ($drafts->isAccessAllowed() === true) {
+            $drafts->processingDeleteRequest();
         }
         break;
-    
     default:
         echo json_encode([
             'status' => false,
@@ -43,4 +44,4 @@ switch ($_SERVER['REQUEST_METHOD']) {
         ]);
         break;
 }
-echo $users->getResponse();
+echo $drafts->getResponse();

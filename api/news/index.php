@@ -23,12 +23,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
     case 'POST':
         $news->processingPostRequest();
         break;
-    case 'PUT':
-        if ($news->isAuthor() === true) {
-            parse_str(file_get_contents('php://input'), $putParams);
-            $news->updateElement($putParams);
-        }
-        break;
     case 'DELETE':
         $news->processingDeleteRequest();
         break;

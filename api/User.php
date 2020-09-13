@@ -45,11 +45,14 @@ class User extends AbstractTable
         $pagination = ' LIMIT ';
         $paginationArg = '';
         
-        
         // Пагинация
         if (array_key_exists('pagination', $_GET)) {
             // Разобрать аргументы
             $paginationArg = substr($_GET['pagination'], 1, -1);
+        }
+
+        if ($paginationArg === '') {
+            $pagination = '';
         }
 
         $query = "SELECT * FROM users" .
@@ -87,8 +90,7 @@ class User extends AbstractTable
         if (
             array_key_exists('firstname', $params) &&
             array_key_exists('lastname', $params) &&
-            array_key_exists('avatar', $params) &&
-            array_key_exists('is_admin', $params)
+            array_key_exists('avatar', $params)
         ) {
             return true;
         } else {
@@ -105,14 +107,13 @@ class User extends AbstractTable
      */
     public function isCreateElementCompleted(array $postParams): bool
     {
-        $query = "INSERT INTO users (firstname, lastname, avatar, is_admin) 
-                VALUES (:firstname, :lastname, :avatar, :is_admin)";
+        $query = "INSERT INTO users (firstname, lastname, avatar) 
+                VALUES (:firstname, :lastname, :avatar)";
         $this->statment = $this->pdo->prepare($query);
 
         $this->statment->bindParam(':firstname', $postParams['firstname']);
         $this->statment->bindParam(':lastname', $postParams['lastname']);
         $this->statment->bindParam(':avatar', $postParams['avatar']);
-        $this->statment->bindParam(':is_admin', $postParams['is_admin']);
 
         $status = $this->statment->execute();
 
@@ -123,22 +124,21 @@ class User extends AbstractTable
     /**
      * Запрос для обновления элемента
      *
-     * @param int $id
      * @param array $putParams - параметры запроса
+     * @param int $id
      *
      * @return bool
      */
-    public function isUpdateElementCompleted(int $id, array $putParams): bool
+    public function isUpdateElementCompleted(array $putParams, int $id): bool
     {
         $query = "UPDATE users SET
-                firstname = :firstname, lastname = :lastname, avatar = :avatar, is_admin = :is_admin
+                firstname = :firstname, lastname = :lastname, avatar = :avatar
                 WHERE user_id = :user_id";
         $this->statment = $this->pdo->prepare($query);
         
         $this->statment->bindParam(':firstname', $putParams['firstname']);
         $this->statment->bindParam(':lastname', $putParams['lastname']);
         $this->statment->bindParam(':avatar', $putParams['avatar']);
-        $this->statment->bindParam(':is_admin', $putParams['is_admin']);
         $this->statment->bindParam(':user_id', $id);
         
         $status = $this->statment->execute();

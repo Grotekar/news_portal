@@ -113,7 +113,7 @@ class News extends AbstractTable
                 if ($listOfCategories[$i]['category_id'] === $newsElement->category_id) {
                     $categoryName = $listOfCategories[$i]['name'];
                     $categoriesOfNewsElement[] = $categoryName;
-                    $parentCategoryId = $listOfCategories[$i]['parent_category'];
+                    $parentCategoryId = $listOfCategories[$i]['parent_category_id'];
                 }
             }
 
@@ -126,7 +126,7 @@ class News extends AbstractTable
                         // Поместить в начало массива
                         array_unshift($categoriesOfNewsElement, $parentCategoryName);
                         // Получить следующий id родительской новости
-                        $parentCategoryId = $listOfCategories[$i]['parent_category'];
+                        $parentCategoryId = $listOfCategories[$i]['parent_category_id'];
                     }
                 }
             }
@@ -139,7 +139,7 @@ class News extends AbstractTable
     }
 
     /**
-     * Получение категорий по списку новостей
+     * Получение тегов по списку новостей
      *
      * @param array $listOfNews
      *
@@ -474,7 +474,6 @@ class News extends AbstractTable
     {
         if (
             array_key_exists('article', $params) &&
-            array_key_exists('author_id', $params) &&
             array_key_exists('category_id', $params) &&
             array_key_exists('content', $params) &&
             array_key_exists('main_image', $params)
@@ -516,6 +515,40 @@ class News extends AbstractTable
                     $this->response = $comments->getResponse();
                 }
             }
+
+        // Если
+        // запрос к новости выполняется успешно и
+        // существует дополнение к пути и
+        // это дополнение равно draft
+        } elseif (
+            $this->isGetRequestSuccess() === true &&
+            isset($this->getParamsRequest()[4]) === true &&
+            $this->getParamsRequest()[4] === 'draft'
+        ) {
+            $response = json_decode($this->response);
+
+            // Если поле статус не существует (значит, новость есть)
+            // и если автор новости собирается создать черновик,
+            // то добавить черновик в таблицу drafts
+            if (
+                isset($response->status) === false &&
+                $response->author_id === $_SERVER['PHP_AUTH_USER']
+            ) {
+                // Заполнить массив $_POST новыми значениями
+                $_POST['news_id'] = $response->news_id;
+                $_POST['article'] = $response->article;
+                $_POST['category_id'] = $response->category_id;
+                $_POST['content'] = $response->content;
+                $_POST['main_image'] = $response->main_image;
+                // Создать черновик
+                $drafts = new Draft($this->pdo);
+                $drafts->createElement();
+                $this->response = $drafts->getResponse();
+            } else {
+                $this->getNotFound();
+            }
+        } elseif (isset($this->getParamsRequest()[4]) === true) {
+            $this->getNotFound();
         } elseif ($this->isAuthor() === true) {
             $this->createElement();
         }
@@ -548,12 +581,12 @@ class News extends AbstractTable
     /**
      * Запрос для обновления элемента
      *
-     * @param int $id
      * @param array $putParams - параметры запроса
+     * @param int $id
      *
      * @return bool
      */
-    public function isUpdateElementCompleted(int $id, array $putParams): bool
+    public function isUpdateElementCompleted(array $putParams, int $id): bool
     {
         $query = "UPDATE news SET
             article = :article, author_id = :author_id, category_id = :category_id, 
@@ -595,7 +628,7 @@ class News extends AbstractTable
 
                 // Если поле статус не существует (значит, комментарий есть),
                 // то удалить комментарий к новости
-                if (!isset($response->status)) {
+                if (isset($response->status) === false) {
                     $comments = new Comment($this->pdo);
                     
                     $comments->deleteElement(5);
@@ -603,7 +636,9 @@ class News extends AbstractTable
                     $this->response = $comments->getResponse();
                 }
             }
-        } elseif ($this->isAuthor() === true) {
+        } elseif (isset($this->getParamsRequest()[4]) === true) {
+            $this->getNotFound();
+        } elseif ($news->isAdmin() === true) {
             $this->deleteElement();
         }
     }

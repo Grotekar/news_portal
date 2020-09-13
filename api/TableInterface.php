@@ -25,10 +25,11 @@ interface TableInterface
      * Обработка PUT-запроса
      *
      * @param array $putParams
+     * @param int $id
      *
      * @return void
      */
-    public function updateElement($putParams): void;
+    public function updateElement($putParams, $id): void;
 
     /**
      * Обработка DELETE-запроса

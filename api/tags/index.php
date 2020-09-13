@@ -27,8 +27,13 @@ switch ($_SERVER['REQUEST_METHOD']) {
         break;
     case 'PUT':
         if ($tags->isAdmin() === true) {
-            parse_str(file_get_contents('php://input'), $putParams);
-            $tags->updateElement($putParams);
+            if (isset($tags->getParamsRequest()[3]) === true) {
+                $tagId = $tags->getParamsRequest()[3];
+                parse_str(file_get_contents('php://input'), $putParams);
+                $tags->updateElement($putParams, $tagId);
+            } else {
+                $tags->getNotFound();
+            }
         }
         break;
     case 'DELETE':

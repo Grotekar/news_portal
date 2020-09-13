@@ -18,7 +18,7 @@ $categories = new Category($pdo);
 $response = [];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
-        $response = $categories->processingGetRequest();
+        $categories->processingGetRequest();
         break;
     case 'POST':
         if ($categories->isAdmin() === true) {
@@ -27,8 +27,13 @@ switch ($_SERVER['REQUEST_METHOD']) {
         break;
     case 'PUT':
         if ($categories->isAdmin() === true) {
-            parse_str(file_get_contents('php://input'), $putParams);
-            $categories->updateElement($putParams);
+            if (isset($categories->getParamsRequest()[3]) === true) {
+                $categoryId = $categories->getParamsRequest()[3];
+                parse_str(file_get_contents('php://input'), $putParams);
+                $categories->updateElement($putParams, $categoryId);
+            } else {
+                $categories->getNotFound();
+            }
         }
         break;
     case 'DELETE':

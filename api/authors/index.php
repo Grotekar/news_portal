@@ -16,6 +16,7 @@ $pdo = $database->getConnect();
 $authors = new Author($pdo);
 
 $response = [];
+
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
         if ($authors->isAdmin() === true) {
@@ -29,8 +30,13 @@ switch ($_SERVER['REQUEST_METHOD']) {
         break;
     case 'PUT':
         if ($authors->isAdmin() === true) {
-            parse_str(file_get_contents('php://input'), $putParams);
-            $authors->updateElement($putParams);
+            if (isset($authors->getParamsRequest()[3]) === true) {
+                $authorId = $authors->getParamsRequest()[3];
+                parse_str(file_get_contents('php://input'), $putParams);
+                $authors->updateElement($putParams, $authorId);
+            } else {
+                $authors->getNotFound();
+            }
         }
         break;
     case 'DELETE':

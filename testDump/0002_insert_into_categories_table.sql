@@ -1,4 +1,4 @@
-INSERT INTO categories (name, parent_category) VALUES
+INSERT INTO categories (name, parent_category_id) VALUES
 ('port', NULL),
 ('sensor', 1),
 ('ipsam', 1),

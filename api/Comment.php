@@ -136,12 +136,12 @@ class Comment extends AbstractTable
     /**
      * Запрос для обновления элемента
      *
-     * @param int $id
      * @param array $putParams - параметры запроса
+     * @param int $id
      *
      * @return bool
      */
-    public function isUpdateElementCompleted(int $id, array $putParams): bool
+    public function isUpdateElementCompleted(array $putParams, int $id): bool
     {
         $query = "UPDATE comments SET
                 news_id = :news_id, user_id = :user_id, text = :text
