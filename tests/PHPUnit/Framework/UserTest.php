@@ -10,24 +10,37 @@ use PHPUnit\Framework\TestCase as TestCase;
 
 class UserTest extends TestCase
 {
-    protected $users;
+    protected User $users;
+    protected PDO $pdo;
 
     public function setUp(): void
     {
         $database = new Database();
-        $pdo = $database->getConnect();
+        $this->pdo = $database->getConnect();
 
-        $this->users = new User($pdo);
+        $this->users = new User($this->pdo);
     }
 
-    public function testIsGetAllComplited(): void
+    public function testIsGetAllCompleted(): void
     {
-        $this->assertTrue($this->users->isGetAllComplited());
+        $this->assertTrue($this->users->isGetAllCompleted()['status']);
     }
 
-    public function testIsGetElementComplited(): void
+    public function testIsGetAllCompletedWithValidPagination(): void
     {
-        $this->assertTrue($this->users->isGetElementComplited(1));
+        $_GET['pagination'] = '[1,4]';
+        $this->assertTrue($this->users->isGetAllCompleted()['status']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidPagination(): void
+    {
+        $_GET['pagination'] = '[1,4a]';
+        $this->assertFalse($this->users->isGetAllCompleted()['status']);
+    }
+
+    public function testIsGetElementCompleted(): void
+    {
+        $this->assertTrue($this->users->isGetElementCompleted(1)['status']);
     }
     
     public function testIsCreateElementCompleted()
@@ -35,24 +48,25 @@ class UserTest extends TestCase
         $postParams['firstname'] = 'testUser';
         $postParams['lastname'] = 'testUser';
         $postParams['avatar'] = '12313';
-        $postParams['is_admin'] = 0;
         
-        $this->assertTrue($this->users->isCreateElementCompleted($postParams));
+        $this->assertTrue($this->users->isCreateElementCompleted($postParams)['status']);
     }
 
     public function testIsUpdateElementCompleted()
     {
-        $putParams['firstname'] = 'testUser';
-        $putParams['lastname'] = 'testUser';
-        $putParams['avatar'] = '12313';
-        $putParams['is_admin'] = 0;
-        $id = 11;
+        $putParams['firstname'] = 'testUser121212';
+        $putParams['lastname'] = 'testUse121212r';
+        $putParams['avatar'] = '123132222222';
+
+        $id = $this->pdo->lastInsertId();
         
-        $this->assertTrue($this->users->isUpdateElementCompleted($id, $putParams));
+        $this->assertTrue($this->users->isUpdateElementCompleted($putParams, $id)['status']);
     }
 
-    public function testIsDeleteteElementCompleted()
+    public function testIsDeleteElementCompleted()
     {
-        $this->assertTrue($this->users->isDeleteteElementCompleted(11));
+        $id = $this->pdo->lastInsertId();
+
+        $this->assertTrue($this->users->isDeleteElementCompleted($id)['status']);
     }
 }
