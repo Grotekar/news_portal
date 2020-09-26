@@ -1,2 +1,2 @@
 #!/bin/bash
-curl -i -X GET http://localhost:8000/api/news?category_id=1
+curl -i -X GET http://localhost:8000/news?category_id=1

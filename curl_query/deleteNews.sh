@@ -1,2 +1,2 @@
 #!/bin/bash
-curl -X DELETE -u '1:' http://localhost:8000/api/news/5 -i
+curl -i -X DELETE -u '1:' http://localhost:8000/news/5
