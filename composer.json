@@ -8,9 +8,11 @@
         }
     ],
     "require": {
+        "php": ">=7.4",
         "vlucas/phpdotenv": "^5.1",
         "psr/log": "^1.1",
-        "ext-pdo": "*"
+        "ext-pdo": "*",
+        "ext-json": "*"
     },
     "autoload": {
         "psr-4": {
