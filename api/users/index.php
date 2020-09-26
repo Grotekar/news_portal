@@ -15,32 +15,6 @@ $pdo = $database->getConnect();
 
 $users = new User($pdo);
 
-$response = [];
-switch ($_SERVER['REQUEST_METHOD']) {
-    case 'GET':
-        $users->processingGetRequest();
-        break;
-    case 'POST':
-        $users->createElement();
-        break;
-    case 'PUT':
-        if ($users->isAccessAllowed() === true) {
-            $userId = $users->getParamsRequest()[3];
-            parse_str(file_get_contents('php://input'), $putParams);
-            $users->updateElement($putParams, $userId);
-        }
-        break;
-    case 'DELETE':
-        if ($users->isAdmin() === true) {
-            $users->deleteElement();
-        }
-        break;
-    
-    default:
-        echo json_encode([
-            'status' => false,
-            'message' => 'Invalid request'
-        ]);
-        break;
-}
+$users->processingRequest();
+
 echo $users->getResponse();

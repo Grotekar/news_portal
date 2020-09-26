@@ -7,18 +7,37 @@ namespace Api;
  */
 abstract class AbstractTable implements TableInterface
 {
-    protected $response;
-    protected $statment;
+    protected string $response;
 
     /**
-     * @param PDO $pdo
+     * Обработка запросов
+     *
+     * @return void
      */
-    public function __construct($pdo)
+    public function processingRequest()
     {
-        $this->logger = new Logger();
-        $this->pdo = $pdo;
+        switch ($_SERVER['REQUEST_METHOD']) {
+            case 'GET':
+                $this->processingGetRequest();
+                break;
+            case 'POST':
+                $this->processingPostRequest();
+                break;
+            case 'PUT':
+                $this->processingPutRequest();
+                break;
+            case 'DELETE':
+                $this->processingDeleteRequest();
+                break;
+            default:
+                $this->response = json_encode([
+                    'status' => false,
+                    'message' => 'Invalid request'
+                ]);
+                break;
+        }
     }
-    
+
     /**
      * Подготовка данных перед выдачей
      *
@@ -42,15 +61,15 @@ abstract class AbstractTable implements TableInterface
 
         // Если нужно получить по id, либо всё
         if (
-            isset($this->getParamsRequest()[3]) &&
-            $this->getParamsRequest()[3] !== '' &&
-            $this->getParamsRequest()[3] > 0
+            isset($this->getParamsRequest()[2]) &&
+            $this->getParamsRequest()[2] !== '' &&
+            $this->getParamsRequest()[2] > 0
         ) {
-            $status = $this->isGetElement($this->getParamsRequest()[3]);
+            $status = $this->isGetElement($this->getParamsRequest()[2]);
         } else {
             $status = $this->isGetAll();
         }
-        
+
         return $status;
     }
 
@@ -60,41 +79,42 @@ abstract class AbstractTable implements TableInterface
     public function isGetAll(): bool
     {
         // Результат запроса к таблице
-        $status = $this->isGetAllComplited();
+        $resultOfRequest = $this->isGetAllCompleted();
 
-        if ($status === false) {
+        if ($resultOfRequest['status'] === false) {
             $this->logger->error(
-                "Bad request. Message from PDO: {errorInfo}.",
-                ['errorInfo' => $this->statment->errorInfo()[2]]
+                "Bad request. Message: {errorInfo}.",
+                ['errorInfo' => $resultOfRequest['errorInfo']]
             );
             
             http_response_code(400);
             $this->response = json_encode([
                 "status" => "false",
-                "message" => $this->statment->errorInfo()[2]
+                "message" => $resultOfRequest['errorInfo']
             ]);
-        } elseif ($this->statment->rowCount() === 0) {
+        } elseif ($resultOfRequest['rowCount'] === 0) {
             http_response_code(404);
             $this->response = json_encode([
                 "status" => false,
-                "message" => $this->statment->errorInfo()[2]
+                "message" => $resultOfRequest['errorInfo']
             ]);
+            $resultOfRequest['status'] = false;
         } else {
             $this->logger->info('The request was completed successfully.');
             // Фиксация полученных данных
             http_response_code(200);
-            $this->response = json_encode($this->statment->fetchAll(\PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
+            $this->response = json_encode($resultOfRequest['fetchAll'], JSON_UNESCAPED_UNICODE);
         }
 
-        return $status;
+        return $resultOfRequest['status'];
     }
 
     /**
      * Запрос для получения всех элементов
      *
-     * @return bool
+     * @return array
      */
-    abstract protected function isGetAllComplited(): bool;
+    abstract protected function isGetAllCompleted(): array;
 
     /**
      * @param int $id
@@ -104,41 +124,43 @@ abstract class AbstractTable implements TableInterface
     public function isGetElement(int $id): bool
     {
         // Результат запроса к таблице
-        $status = $this->isGetElementComplited($id);
+        $resultOfRequest = $this->isGetElementCompleted($id);
         
-        if ($status === false) {
+        if ($resultOfRequest['status'] === false) {
             $this->logger->info(
-                "Not found. Message from PDO: {errorInfo}.",
-                ['errorInfo' => $this->statment->errorInfo()[2]]
+                "Not found. Message: {errorInfo}.",
+                ['errorInfo' => $resultOfRequest['errorInfo']]
             );
             
             http_response_code(404);
             $this->response = json_encode([
                 "status" => false,
-                "message" => $this->statment->errorInfo()[2]
+                "message" => $resultOfRequest['errorInfo']
             ]);
-        } elseif ($this->statment->rowCount() === 0) {
+        } elseif ($resultOfRequest['rowCount'] === 0) {
             http_response_code(404);
             $this->response = json_encode([
                 "status" => false,
-                "message" => $this->statment->errorInfo()[2]
+                "message" => $resultOfRequest['errorInfo']
             ]);
         } else {
             $this->logger->info('The request was completed successfully.');
             // Фиксация полученных данных
             http_response_code(200);
-            $this->response = json_encode($this->statment->fetch(\PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
+            $this->response = json_encode($resultOfRequest['fetch'], JSON_UNESCAPED_UNICODE);
         }
 
-        return $status;
+        return $resultOfRequest['rowCount'];
     }
 
-     /**
+    /**
      * Запрос для получения элемента
      *
-     * @return bool
+     * @param int $id
+     *
+     * @return array
      */
-    abstract public function isGetElementComplited(int $id): bool;
+    abstract public function isGetElementCompleted(int $id): array;
     
     /**
      * Обработка POST-запроса.
@@ -156,22 +178,23 @@ abstract class AbstractTable implements TableInterface
         // Проверка переданных переменных
         if ($this->isExistsParamsInArray($_POST)) {
             // Результат запроса к таблице
-            $status = $this->isCreateElementCompleted($_POST);
+            $resultOfRequest = $this->isCreateElementCompleted($_POST);
             
-            if ($status === false) {
+            if ($resultOfRequest['status'] === false) {
                 $this->logger->error(
-                    'Bad request. Message from PDO: {errorInfo}.',
-                    ['errorInfo' => $this->statment->errorInfo()[2]]
+                    'Bad request. Message: {errorInfo}.',
+                    ['errorInfo' => $resultOfRequest['errorInfo']]
                 );
                 
                 http_response_code(400);
                 $this->response = json_encode([
                     "status" => false,
-                    "message" => $this->statment->errorInfo()[2]
+                    "message" => $resultOfRequest['errorInfo']
                 ]);
             } else {
                 http_response_code(201);
-                if ($this->pdo->lastInsertId() === '0') {
+                // При создании автора наследуется user_id
+                if ($resultOfRequest['lastInsertId'] === '0') {
                     $this->response = json_encode([
                         'status' => true,
                         'id' => 'Inherits.'
@@ -179,10 +202,11 @@ abstract class AbstractTable implements TableInterface
                 } else {
                     $this->response = json_encode([
                         'status' => true,
-                        'id' => $this->pdo->lastInsertId()
+                        'id' => $resultOfRequest['lastInsertId']
                     ]);
                 }
             }
+            $status = $resultOfRequest['status'];
         } else {
             http_response_code(400);
             $this->response = json_encode([
@@ -206,38 +230,39 @@ abstract class AbstractTable implements TableInterface
      *
      * @param array $postParams
      *
-     * @return bool
+     * @return array
      */
-    abstract public function isCreateElementCompleted(array $postParams): bool;
+    abstract public function isCreateElementCompleted(array $postParams): array;
 
     /**
      * Обработка PUT-запроса
+     *
      * @param array $putParams
      * @param int $id
      *
      * @return void
      */
-    public function updateElement($putParams, $id): void
+    public function updateElement(array $putParams, int $id): void
     {
         header("Access-Control-Allow-Origin: *");
         header("Access-Control-Allow-Methods: PUT");
         header("Access-Control-Max-Age: 3600");
         header("Access-Control-Allow-Headers: *");
 
-        if ($this->isExistsParamsInArray($putParams)) {
+        if ($this->isExistsParamsInArray($putParams) === true) {
             // Запрос к таблице
-            $status = $this->isUpdateElementCompleted($putParams, $id);
-                        
-            if ($status === false) {
+            $resultOfRequest = $this->isUpdateElementCompleted($putParams, $id);
+
+            if ($resultOfRequest['status'] === false) {
                 $this->logger->error(
                     'Bad request. Message from PDO: {errorInfo}.',
-                    ['errorInfo' => $this->statment->errorInfo()[2]]
+                    ['errorInfo' => $resultOfRequest['errorInfo']]
                 );
                 
-                http_response_code(304);
+                http_response_code(404);
                 $this->response = json_encode([
                     "status" => false,
-                    "message" => $this->statment->errorInfo()[2]
+                    "message" => $resultOfRequest['errorInfo']
                 ]);
             } else {
                 http_response_code(200);
@@ -261,16 +286,18 @@ abstract class AbstractTable implements TableInterface
      * @param array $putParams - параметры запроса
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    abstract public function isUpdateElementCompleted(array $putParams, int $id): bool;
+    abstract public function isUpdateElementCompleted(array $putParams, int $id): array;
 
     /**
      * Обработка DELETE-запроса
      *
+     * @param int $basePosId
+     *
      * @return void
      */
-    public function deleteElement(int $basePosId = 3): void
+    public function deleteElement(int $basePosId = 2): void
     {
         header("Access-Control-Allow-Origin: *");
         header("Access-Control-Allow-Methods: DELETE");
@@ -282,20 +309,20 @@ abstract class AbstractTable implements TableInterface
 
         if ($id > 0) {
             // Запрос к таблице
-            $status = $this->isDeleteElementCompleted($id);
+            $resultOfRequest = $this->isDeleteElementCompleted($id);
 
-            if ($status === false) {
+            if ($resultOfRequest['status'] === false) {
                 $this->logger->error(
                     'Bad request. Message from PDO: {errorInfo}.',
-                    ['errorInfo' => $this->statment->errorInfo()[2]]
+                    ['errorInfo' => $resultOfRequest['errorInfo']]
                 );
                 
                 http_response_code(400);
                 $this->response = json_encode([
                     'status' => false,
-                    "message" => $this->statment->errorInfo()[2]
+                    "message" => $resultOfRequest['errorInfo']
                 ]);
-            } elseif ($this->statment->rowCount() === 0) {
+            } elseif ($resultOfRequest['rowCount'] === 0) {
                 http_response_code(404);
                 $this->response = json_encode([
                     "status" => false,
@@ -322,9 +349,9 @@ abstract class AbstractTable implements TableInterface
      *
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    abstract public function isDeleteElementCompleted(int $id): bool;
+    abstract public function isDeleteElementCompleted(int $id): array;
 
     /**
      * Идентификация администратора
@@ -336,20 +363,19 @@ abstract class AbstractTable implements TableInterface
         $users = new User($this->pdo);
 
         if (
-            isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' &&
-            $users->isGetElementComplited($_SERVER['PHP_AUTH_USER']) === true
+            isset($_SERVER['PHP_AUTH_USER']) === true &&
+            $_SERVER['PHP_AUTH_USER'] !== ''
         ) {
-            $this->statment = $users->getStatment();
+            $receivedUser = $users->isGetElementCompleted($_SERVER['PHP_AUTH_USER']);
             
-            if ($this->statment !== null) {
-                if ($this->statment->rowCount() !== 0) {
-                    $user = $this->statment->fetch(\PDO::FETCH_ASSOC);
-
-                    if ($user['is_admin'] === '1') {
-                        $this->logger->debug('Access is allowed.');
-                        return true;
-                    }
-                }
+            if (
+                $receivedUser['status'] === true &&
+                $receivedUser['fetch'] !== null &&
+                $receivedUser['rowCount'] !== 0 &&
+                $receivedUser['fetch']['is_admin'] === '1'
+            ) {
+                $this->logger->debug('Access is allowed.');
+                return true;
             }
         }
         $this->logger->debug('Access denied');
@@ -372,20 +398,22 @@ abstract class AbstractTable implements TableInterface
         $authors = new Author($this->pdo);
 
         if (
-            isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' &&
-            $authors->isGetElementComplited($_SERVER['PHP_AUTH_USER']) === true
+            isset($_SERVER['PHP_AUTH_USER']) === true &&
+            $_SERVER['PHP_AUTH_USER'] !== ''
         ) {
-            $this->statment = $authors->getStatment();
-            
-            if ($this->statment !== null) {
-                $authors = $this->statment->fetch(\PDO::FETCH_ASSOC);
+            $receivedAuthor = $authors->isGetElementCompleted($_SERVER['PHP_AUTH_USER']);
 
-                if ($authors['user_id'] === (string) $_SERVER['PHP_AUTH_USER']) {
-                    $this->logger->debug('Access is allowed.');
-                    return true;
-                }
+            if (
+                $receivedAuthor['status'] === true &&
+                $receivedAuthor['fetch'] !== null &&
+                $receivedAuthor['rowCount'] !== 0 &&
+                $receivedAuthor['fetch']['user_id'] === $_SERVER['PHP_AUTH_USER']
+            ) {
+                $this->logger->debug('Access is allowed.');
+                return true;
             }
         }
+
         $this->logger->debug('Access denied');
 
         http_response_code(404);
@@ -407,14 +435,6 @@ abstract class AbstractTable implements TableInterface
     }
 
     /**
-     * @return object
-     */
-    public function getStatment(): object
-    {
-        return $this->statment;
-    }
-
-    /**
      * @return string
      */
     public function getResponse(): string
@@ -423,16 +443,21 @@ abstract class AbstractTable implements TableInterface
     }
 
     /**
-     * Ошибка 404
+     * Валидация пагинации
      *
-     * @return void
+     * @param string $paginationArgs
+     *
+     * @return bool
      */
-    public function getNotFound(): void
+    public function isValidPagination(string $paginationArgs)
     {
-        http_response_code(404);
-        $this->response = json_encode([
-            'status' => false,
-            'message' => 'Not Found.'
-        ]);
+        $pattern = "/^\[[0-9]+,?[0-9]+?\]/";
+        $numberOfOccurrences = preg_match_all($pattern, $paginationArgs);
+
+        if ($numberOfOccurrences === 1) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }

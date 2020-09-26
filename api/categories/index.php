@@ -15,38 +15,6 @@ $pdo = $database->getConnect();
 
 $categories = new Category($pdo);
 
-$response = [];
-switch ($_SERVER['REQUEST_METHOD']) {
-    case 'GET':
-        $categories->processingGetRequest();
-        break;
-    case 'POST':
-        if ($categories->isAdmin() === true) {
-            $categories->createElement();
-        }
-        break;
-    case 'PUT':
-        if ($categories->isAdmin() === true) {
-            if (isset($categories->getParamsRequest()[3]) === true) {
-                $categoryId = $categories->getParamsRequest()[3];
-                parse_str(file_get_contents('php://input'), $putParams);
-                $categories->updateElement($putParams, $categoryId);
-            } else {
-                $categories->getNotFound();
-            }
-        }
-        break;
-    case 'DELETE':
-        if ($categories->isAdmin() === true) {
-            $categories->deleteElement();
-        }
-        break;
-    
-    default:
-        echo json_encode([
-            'status' => false,
-            'message' => 'Invalid request'
-        ]);
-        break;
-}
+$categories->processingRequest();
+
 echo $categories->getResponse();

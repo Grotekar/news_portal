@@ -15,22 +15,6 @@ $pdo = $database->getConnect();
 
 $news = new News($pdo);
 
-$response = [];
-switch ($_SERVER['REQUEST_METHOD']) {
-    case 'GET':
-        $news->processingGetRequest();
-        break;
-    case 'POST':
-        $news->processingPostRequest();
-        break;
-    case 'DELETE':
-        $news->processingDeleteRequest();
-        break;
-    default:
-        echo json_encode([
-            'status' => false,
-            'message' => 'Invalid request'
-        ]);
-        break;
-}
+$news->processingRequest();
+
 echo $news->getResponse();

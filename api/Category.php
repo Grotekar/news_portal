@@ -37,47 +37,76 @@ class Category extends AbstractTable
     /**
      * Запрос для получения всех элементов
      *
-     * @return bool
+     * @return array
      */
-    public function isGetAllComplited(): bool
+    public function isGetAllCompleted(): array
     {
         $pagination = ' LIMIT ';
         $paginationArg = '';
+        $isValid = true;
+        $result = [];
         
         // Пагинация
         if (array_key_exists('pagination', $_GET)) {
-            // Разобрать аргументы
-            $paginationArg = substr($_GET['pagination'], 1, -1);
+            // Проверка
+            if ($this->isValidPagination($_GET['pagination']) === true) {
+                $paginationArg = substr($_GET['pagination'], 1, -1);
+            } else {
+                $this->logger->debug('Invalid pagination');
+                $isValid = false;
+            }
         }
 
-        if ($paginationArg === '') {
-            $pagination = '';
-        }
+        if ($isValid === true) {
+            if ($paginationArg === '') {
+                $pagination = '';
+            }
 
-        $query = "SELECT * FROM categories" .
+            $query = "SELECT * FROM categories" .
                 $pagination . $paginationArg;
-                
-        $this->statment = $this->pdo->prepare($query);
-        $status = $this->statment->execute();
+            $statement = $this->pdo->prepare($query);
 
-        return $status;
+            $result = [
+                'status' => $statement->execute(),
+                'errorInfo' => $statement->errorInfo()[2],
+                'rowCount' => $statement->rowCount(),
+                'fetchAll' => $statement->fetchAll(PDO::FETCH_ASSOC)
+            ];
+
+            return $result;
+        } else {
+            $result = [
+                'status' => false,
+                'errorInfo' => 'Bad Request',
+                'rowCount' => 0
+            ];
+
+            return $result;
+        }
     }
 
     /**
      * Запрос для получения элемента
      *
-     * @return bool
+     * @param int $id
+     *
+     * @return array
      */
-    public function isGetElementComplited(int $id): bool
+    public function isGetElementCompleted(int $id): array
     {
         $query = "SELECT * FROM categories WHERE category_id=(:category_id)";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
         
-        $this->statment->bindParam(":category_id", $id);
+        $statement->bindParam(":category_id", $id);
         
-        $status = $this->statment->execute();
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'rowCount' => $statement->rowCount(),
+            'fetch' => $statement->fetch(PDO::FETCH_ASSOC)
+        ];
 
-        return $status;
+        return $result;
     }
 
     /**
@@ -97,24 +126,75 @@ class Category extends AbstractTable
     }
 
     /**
+     * Обработка POST-запроса
+     *
+     * @return void
+     */
+    public function processingPostRequest(): void
+    {
+        if ($this->isAdmin() === true) {
+            $this->createElement();
+        }
+    }
+
+    /**
      * Запрос на создание элемента
      *
      * @param array $postParams
      *
-     * @return bool
+     * @return array
      */
-    public function isCreateElementCompleted(array $postParams): bool
+    public function isCreateElementCompleted(array $postParams): array
     {
+        //Проверка parent_category_id
+        if (array_key_exists('parent_category_id', $postParams)) {
+            // Если такого id не существует, то ошибка
+            if ($this->isValidParentCategoryId($postParams['parent_category_id']) === false) {
+                $result = [
+                    'status' => false,
+                    'errorInfo' => 'Invalid parent_category_id'
+                ];
+
+                return $result;
+            }
+        }
+
         $query = "INSERT INTO categories (name, parent_category_id) 
                 VALUES (:name, :parent_category_id)";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
 
-        $this->statment->bindParam(':name', $postParams['name']);
-        $this->statment->bindParam(':parent_category_id', $postParams['parent_category_id']);
+        $statement->bindParam(':name', $postParams['name']);
+        $statement->bindParam(':parent_category_id', $postParams['parent_category_id']);
         
-        $status = $this->statment->execute();
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'lastInsertId' => $this->pdo->lastInsertId()
+        ];
 
-        return $status;
+        return $result;
+    }
+
+    /**
+     * Обработка PUT-запроса
+     *
+     * @return void
+     */
+    public function processingPutRequest(): void
+    {
+        if ($this->isAdmin() === true) {
+            if (isset($this->getParamsRequest()[2]) === true) {
+                $id = $this->getParamsRequest()[2];
+                parse_str(file_get_contents('php://input'), $putParams);
+                $this->updateElement($putParams, $id);
+            } else {
+                http_response_code(404);
+                $this->response = json_encode([
+                    'status' => false,
+                    'message' => 'Not Found.'
+                ]);
+            }
+        }
     }
 
     /**
@@ -123,22 +203,50 @@ class Category extends AbstractTable
      * @param array $putParams - параметры запроса
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    public function isUpdateElementCompleted(array $putParams, int $id): bool
+    public function isUpdateElementCompleted(array $putParams, int $id): array
     {
+        //Проверка parent_category_id
+        if (array_key_exists('parent_category_id', $putParams)) {
+            // Если такого id не существует, то ошибка
+            if ($this->isValidParentCategoryId($putParams['parent_category_id']) === false) {
+                $result = [
+                    'status' => false,
+                    'errorInfo' => 'Invalid parent_category_id'
+                ];
+
+                return $result;
+            }
+        }
+
         $query = "UPDATE categories SET
             name = :name, parent_category_id = :parent_category_id
             WHERE category_id = :category_id";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
 
-        $this->statment->bindParam(':name', $putParams['name']);
-        $this->statment->bindParam(':parent_category_id', $putParams['parent_category_id']);
-        $this->statment->bindParam(':category_id', $id);
+        $statement->bindParam(':name', $putParams['name']);
+        $statement->bindParam(':parent_category_id', $putParams['parent_category_id']);
+        $statement->bindParam(':category_id', $id);
         
-        $status = $this->statment->execute();
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2]
+        ];
 
-        return $status;
+        return $result;
+    }
+
+    /**
+     * Обработка DELETE-запроса
+     *
+     * @return void
+     */
+    public function processingDeleteRequest(): void
+    {
+        if ($this->isAdmin() === true) {
+            $this->deleteElement();
+        }
     }
 
     /**
@@ -146,17 +254,37 @@ class Category extends AbstractTable
      *
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    public function isDeleteElementCompleted(int $id): bool
+    public function isDeleteElementCompleted(int $id): array
     {
         $query = "DELETE FROM categories WHERE category_id = :category_id";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
         
-        $this->statment->bindParam(':category_id', $id);
+        $statement->bindParam(':category_id', $id);
         
-        $status = $this->statment->execute();
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'rowCount' => $statement->rowCount()
+        ];
 
-        return $status;
+        return $result;
+    }
+
+    /**
+     * @param int $id
+     *
+     * @return bool
+     */
+    private function isValidParentCategoryId(int $id): bool
+    {
+        $category = $this->isGetElementCompleted($id);
+
+        if ($category['rowCount'] === 0) {
+            return false;
+        } else {
+            return true;
+        }
     }
 }

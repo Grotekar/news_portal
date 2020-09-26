@@ -29,7 +29,7 @@ interface TableInterface
      *
      * @return void
      */
-    public function updateElement($putParams, $id): void;
+    public function updateElement(array $putParams, int $id): void;
 
     /**
      * Обработка DELETE-запроса

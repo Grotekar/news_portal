@@ -15,41 +15,7 @@ $pdo = $database->getConnect();
 
 $authors = new Author($pdo);
 
-$response = [];
 
-switch ($_SERVER['REQUEST_METHOD']) {
-    case 'GET':
-        if ($authors->isAdmin() === true) {
-            $authors->processinggetRequest();
-        }
-        break;
-    case 'POST':
-        if ($authors->isAdmin() === true) {
-            $authors->createElement();
-        }
-        break;
-    case 'PUT':
-        if ($authors->isAdmin() === true) {
-            if (isset($authors->getParamsRequest()[3]) === true) {
-                $authorId = $authors->getParamsRequest()[3];
-                parse_str(file_get_contents('php://input'), $putParams);
-                $authors->updateElement($putParams, $authorId);
-            } else {
-                $authors->getNotFound();
-            }
-        }
-        break;
-    case 'DELETE':
-        if ($authors->isAdmin() === true) {
-            $authors->deleteElement();
-        }
-        break;
-    
-    default:
-        echo json_encode([
-            'status' => false,
-            'message' => 'Invalid request'
-        ]);
-        break;
-}
+$authors->processingRequest();
+
 echo $authors->getResponse();

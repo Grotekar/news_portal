@@ -31,44 +31,89 @@ class Draft extends AbstractTable
      */
     public function processingGetRequest(): void
     {
-        $this->isGetRequestSuccess();
+        if ($this->isAuthor() === true) {
+            $this->isGetRequestSuccess();
+        }
     }
 
     /**
      * Запрос для получения всех элементов
      *
-     * @return bool
+     * @return array
      */
-    public function isGetAllComplited(): bool
+    public function isGetAllCompleted(): array
     {
-        $query = "SELECT *
-                FROM drafts
-                WHERE author_id = :author_id";
-        $this->statment = $this->pdo->prepare($query);
+        $pagination = ' LIMIT ';
+        $paginationArg = '';
+        $isValid = true;
+        $result = [];
 
-        $this->statment->bindParam(":author_id", $_SERVER['PHP_AUTH_USER']);
+        // Пагинация
+        if (array_key_exists('pagination', $_GET)) {
+            // Проверка
+            if ($this->isValidPagination($_GET['pagination']) === true) {
+                $paginationArg = substr($_GET['pagination'], 1, -1);
+            } else {
+                $this->logger->debug('Invalid pagination');
+                $isValid = false;
+            }
+        }
 
-        $status = $this->statment->execute();
+        if ($isValid === true) {
+            if ($paginationArg === '') {
+                $pagination = '';
+            }
 
-        return $status;
+            $query = "SELECT *
+                    FROM drafts
+                    WHERE author_id = :author_id" .
+                    $pagination . $paginationArg;
+            $statement = $this->pdo->prepare($query);
+
+            $statement->bindParam(":author_id", $_SERVER['PHP_AUTH_USER']);
+
+            $result = [
+                'status' => $statement->execute(),
+                'errorInfo' => $statement->errorInfo()[2],
+                'rowCount' => $statement->rowCount(),
+                'fetchAll' => $statement->fetchAll(PDO::FETCH_ASSOC)
+            ];
+
+            return $result;
+        } else {
+            $result = [
+                'status' => false,
+                'errorInfo' => 'Bad Request',
+                'rowCount' => 0
+            ];
+
+            return $result;
+        }
     }
 
     /**
      * Запрос для получения элемента
      *
-     * @return bool
+     * @param int $id
+     *
+     * @return array
      */
-    public function isGetElementComplited(int $id): bool
+    public function isGetElementCompleted(int $id): array
     {
         $query = "SELECT * FROM drafts WHERE draft_id = (:draft_id) AND author_id = (:author_id)";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
 
-        $this->statment->bindParam(":draft_id", $id);
-        $this->statment->bindParam(":author_id", $_SERVER['PHP_AUTH_USER']);
-        
-        $status = $this->statment->execute();
+        $statement->bindParam(":draft_id", $id);
+        $statement->bindParam(":author_id", $_SERVER['PHP_AUTH_USER']);
 
-        return $status;
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'rowCount' => $statement->rowCount(),
+            'fetch' => $statement->fetch(PDO::FETCH_ASSOC)
+        ];
+
+        return $result;
     }
 
     /**
@@ -103,8 +148,8 @@ class Draft extends AbstractTable
         // это дополнение равно publish
         if (
             $this->isGetRequestSuccess() === true &&
-            isset($this->getParamsRequest()[4]) === true &&
-            $this->getParamsRequest()[4] === 'publish'
+            isset($this->getParamsRequest()[3]) === true &&
+            $this->getParamsRequest()[3] === 'publish'
         ) {
             $response = json_decode($this->response);
 
@@ -119,19 +164,25 @@ class Draft extends AbstractTable
                 $putParams['main_image'] = $response->main_image;
                 // Изменить новость
                 $news = new News($this->pdo);
+
                 $news->updateElement($putParams, $response->news_id);
                 $this->response = $news->getResponse();
                 // Изменить статус черновика
                 $query = "UPDATE drafts SET
                             is_published = 1
                             WHERE draft_id = :draft_id";
-                $statment = $this->pdo->prepare($query);
+                $statement = $this->pdo->prepare($query);
 
-                $statment->bindParam(":draft_id", $this->getParamsRequest()[3]);
-                $statment->execute();
+                $statement->bindParam(":draft_id", $this->getParamsRequest()[2]);
+
+                $statement->execute();
             }
         } else {
-            $this->getNotFound();
+            http_response_code(404);
+            $this->response = json_encode([
+                'status' => false,
+                'message' => 'Not Found.'
+            ]);
         }
     }
 
@@ -140,24 +191,42 @@ class Draft extends AbstractTable
      *
      * @param array $postParams
      *
-     * @return bool
+     * @return array
      */
-    public function isCreateElementCompleted(array $postParams): bool
+    public function isCreateElementCompleted(array $postParams): array
     {
         $query = "INSERT INTO drafts (news_id, article, author_id, category_id, content, main_image)
                 VALUES (:news_id, :article, :author_id, :category_id, :content, :main_image)";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
 
-        $this->statment->bindParam(':news_id', $postParams['news_id']);
-        $this->statment->bindParam(':article', $postParams['article']);
-        $this->statment->bindParam(':author_id', $_SERVER['PHP_AUTH_USER']);
-        $this->statment->bindParam(':category_id', $postParams['category_id']);
-        $this->statment->bindParam(':content', $postParams['content']);
-        $this->statment->bindParam(':main_image', $postParams['main_image']);
+        $statement->bindParam(':news_id', $postParams['news_id']);
+        $statement->bindParam(':article', $postParams['article']);
+        $statement->bindParam(':author_id', $_SERVER['PHP_AUTH_USER']);
+        $statement->bindParam(':category_id', $postParams['category_id']);
+        $statement->bindParam(':content', $postParams['content']);
+        $statement->bindParam(':main_image', $postParams['main_image']);
 
-        $status = $this->statment->execute();
-        
-        return $status;
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'lastInsertId' => $this->pdo->lastInsertId()
+        ];
+
+        return $result;
+    }
+
+    /**
+     * Обработка PUT-запроса
+     *
+     * @return void
+     */
+    public function processingPutRequest(): void
+    {
+        if ($this->isAccessAllowed() === true) {
+            $id = $this->getParamsRequest()[2];
+            parse_str(file_get_contents('php://input'), $putParams);
+            $this->updateElement($putParams, $id);
+        }
     }
 
     /**
@@ -166,24 +235,27 @@ class Draft extends AbstractTable
      * @param array $putParams - параметры запроса
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    public function isUpdateElementCompleted(array $putParams, int $id): bool
+    public function isUpdateElementCompleted(array $putParams, int $id): array
     {
         $query = "UPDATE drafts SET
             article = :article, category_id = :category_id, content = :content, main_image = :main_image
             WHERE draft_id = :draft_id";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
         
-        $this->statment->bindParam(':article', $putParams['article']);
-        $this->statment->bindParam(':category_id', $putParams['category_id']);
-        $this->statment->bindParam(':content', $putParams['content']);
-        $this->statment->bindParam(':main_image', $putParams['main_image']);
-        $this->statment->bindParam(':draft_id', $id);
+        $statement->bindParam(':article', $putParams['article']);
+        $statement->bindParam(':category_id', $putParams['category_id']);
+        $statement->bindParam(':content', $putParams['content']);
+        $statement->bindParam(':main_image', $putParams['main_image']);
+        $statement->bindParam(':draft_id', $id);
 
-        $status = $this->statment->execute();
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2]
+        ];
 
-        return $status;
+        return $result;
     }
 
     /**
@@ -193,31 +265,10 @@ class Draft extends AbstractTable
      */
     public function processingDeleteRequest(): void
     {
-        // Если
-        // запрос к новости выполняется успешно и
-        // существует дополнение к пути и
-        // это дополнение равно comments
-        if (
-            $this->isGetRequestSuccess() === true &&
-            isset($this->getParamsRequest()[4]) === true &&
-            $this->getParamsRequest()[4] === 'comments'
-        ) {
-            // Если пользователь удаляет свой комментарий
-            if ($this->isAccessAllowedToComment() === true) {
-                $response = json_decode($this->getResponse());
-
-                // Если поле статус не существует (значит, комментарий есть),
-                // то удалить комментарий к новости
-                if (!isset($response->status)) {
-                    $comments = new Comment($this->pdo);
-                    
-                    $comments->deleteElement(5);
-
-                    $this->response = $comments->getResponse();
-                }
+        if ($this->isAccessAllowed() === true) {
+            if ($this->isAuthor() === true) {
+                $this->deleteElement();
             }
-        } elseif ($this->isAuthor() === true) {
-            $this->deleteElement();
         }
     }
 
@@ -226,17 +277,22 @@ class Draft extends AbstractTable
      *
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    public function isDeleteElementCompleted(int $id): bool
+    public function isDeleteElementCompleted(int $id): array
     {
         $query = "DELETE FROM drafts WHERE draft_id = :draft_id";
-        $this->statment = $this->pdo->prepare($query);
-        $this->statment->bindParam(':draft_id', $id);
+        $statement = $this->pdo->prepare($query);
 
-        $status = $this->statment->execute();
+        $statement->bindParam(':draft_id', $id);
 
-        return $status;
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'rowCount' => $statement->rowCount()
+        ];
+
+        return $result;
     }
 
     /**
@@ -247,20 +303,24 @@ class Draft extends AbstractTable
     public function isAccessAllowed(): bool
     {
         if (
-            isset($_SERVER['PHP_AUTH_USER']) && $_SERVER['PHP_AUTH_USER'] !== '' &&
-            isset($this->getParamsRequest()[3]) && $this->getParamsRequest()[3] !== '' &&
-            $this->isGetElementComplited($this->getParamsRequest()[3]) === true
+            isset($_SERVER['PHP_AUTH_USER']) === true &&
+            $_SERVER['PHP_AUTH_USER'] !== '' &&
+            isset($this->getParamsRequest()[2]) === true &&
+            $this->getParamsRequest()[2] !== '' &&
+            $this->isGetElementCompleted($this->getParamsRequest()[2])['status'] === true
         ) {
-            if ($this->statment !== null) {
-                $draft = $this->statment->fetch(\PDO::FETCH_ASSOC);
+            $draft = $this->isGetElementCompleted($this->getParamsRequest()[2]);
 
-                if ($draft['author_id'] === $_SERVER['PHP_AUTH_USER']) {
+            if ($draft['fetch'] !== null) {
+                if ($draft['fetch']['author_id'] === $_SERVER['PHP_AUTH_USER']) {
                     $this->logger->debug('Access is allowed.');
                     return true;
                 } else {
                     $this->logger->debug('Access denied');
                 }
             }
+        } else {
+            $this->logger->debug('User not found.');
         }
 
         http_response_code(404);

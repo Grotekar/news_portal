@@ -13,7 +13,6 @@ use Psr\Log\LoggerInterface;
 class Author extends AbstractTable
 {
     protected PDO $pdo;
-    protected string $tableName = 'authors';
     protected LoggerInterface $logger;
     
     /**
@@ -33,52 +32,79 @@ class Author extends AbstractTable
     public function processingGetRequest(): void
     {
         // Получение данных
-        $this->isGetRequestSuccess();
+        if ($this->isAdmin() === true) {
+            $this->isGetRequestSuccess();
+        }
     }
 
     /**
      * Запрос для получения всех элементов
      *
-     * @return bool
+     * @return array
      */
-    public function isGetAllComplited(): bool
+    public function isGetAllCompleted(): array
     {
         $pagination = ' LIMIT ';
         $paginationArg = '';
+        $isValid = true;
+        $result = [];
         
         // Пагинация
         if (array_key_exists('pagination', $_GET)) {
-            // Разобрать аргументы
-            $paginationArg = substr($_GET['pagination'], 1, -1);
+            // Проверка
+            if ($this->isValidPagination($_GET['pagination']) === true) {
+                $paginationArg = substr($_GET['pagination'], 1, -1);
+            } else {
+                $this->logger->debug('Invalid pagination');
+                $isValid = false;
+            }
         }
 
-        if ($paginationArg === '') {
-            $pagination = '';
+        if ($isValid === true) {
+            if ($paginationArg === '') {
+                $pagination = '';
+            }
+
+            $query = "SELECT u.user_id,
+                            u.firstname,
+                            u.lastname,
+                            u.avatar,
+                            u.created,
+                            u.is_admin,
+                            a.description
+                    FROM users u
+                    JOIN authors a
+                        ON u.user_id = a.user_id" .
+                    $pagination . $paginationArg;
+            $statement = $this->pdo->prepare($query);
+
+            $result = [
+                'status' => $statement->execute(),
+                'errorInfo' => $statement->errorInfo()[2],
+                'rowCount' => $statement->rowCount(),
+                'fetchAll' => $statement->fetchAll(PDO::FETCH_ASSOC)
+            ];
+
+            return $result;
+        } else {
+            $result = [
+                'status' => false,
+                'errorInfo' => 'Bad Request',
+                'rowCount' => 0
+            ];
+
+            return $result;
         }
-
-        $query = "SELECT u.user_id,
-                        u.firstname,
-                        u.lastname,
-                        u.avatar,
-                        u.created,
-                        u.is_admin,
-                        a.description
-                FROM users u
-                JOIN authors a
-                    ON u.user_id = a.user_id" .
-                $pagination . $paginationArg;
-        $this->statment = $this->pdo->prepare($query);
-        $status = $this->statment->execute();
-
-        return $status;
     }
 
     /**
      * Запрос для получения элемента
      *
-     * @return bool
+     * @param int $id
+     *
+     * @return array
      */
-    public function isGetElementComplited(int $id): bool
+    public function isGetElementCompleted(int $id): array
     {
         $query = "SELECT u.user_id,
                         u.firstname,
@@ -91,13 +117,18 @@ class Author extends AbstractTable
                 JOIN authors a
                     ON u.user_id = a.user_id
                 WHERE a.user_id = (:user_id)";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
         
-        $this->statment->bindParam(":user_id", $id);
+        $statement->bindParam(":user_id", $id);
         
-        $status = $this->statment->execute();
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'rowCount' => $statement->rowCount(),
+            'fetch' => $statement->fetch(PDO::FETCH_ASSOC)
+        ];
 
-        return $status;
+        return $result;
     }
 
     /**
@@ -108,7 +139,6 @@ class Author extends AbstractTable
     protected function isExistsParamsInArray(array $params): bool
     {
         if (
-            array_key_exists('user_id', $params) &&
             array_key_exists('description', $params)
         ) {
             return true;
@@ -118,46 +148,106 @@ class Author extends AbstractTable
     }
 
     /**
+     * Обработка POST-запроса
+     *
+     * @return void
+     */
+    public function processingPostRequest(): void
+    {
+        if ($this->isAdmin() === true) {
+            $this->createElement();
+        }
+    }
+
+    /**
      * Запрос на создание элемента
      *
      * @param array $postParams
      *
-     * @return bool
+     * @return array
      */
-    public function isCreateElementCompleted(array $postParams): bool
+    public function isCreateElementCompleted(array $postParams): array
     {
-        $query = "INSERT INTO authors (user_id, description) 
-                VALUES (:user_id, :description)";
-        $this->statment = $this->pdo->prepare($query);
+        // Если user_id не указан, вернуть ошибку
+        if (array_key_exists('user_id', $postParams) === false) {
+            $result = [
+                'status' => false,
+                "errorInfo" => "Bad request or not enough data"
+            ];
 
-        $this->statment->bindParam(':user_id', $postParams['user_id']);
-        $this->statment->bindParam(':description', $postParams['description']);
-
-        $status = $this->statment->execute();
-
-        return $status;
+            return $result;
+        } else {
+            $query = "INSERT INTO authors (user_id, description) 
+                    VALUES (:user_id, :description)";
+            $statement = $this->pdo->prepare($query);
+            $statement->bindParam(':user_id', $postParams['user_id']);
+            $statement->bindParam(':description', $postParams['description']);
+            $result = [
+                'status' => $statement->execute(),
+                'errorInfo' => $statement->errorInfo()[2],
+                'lastInsertId' => $this->pdo->lastInsertId()
+            ];
+            return $result;
+        }
     }
-    
+
+    /**
+     * Обработка PUT-запроса
+     *
+     * @return void
+     */
+    public function processingPutRequest(): void
+    {
+        if ($this->isAdmin() === true) {
+            if (isset($this->getParamsRequest()[2]) === true) {
+                $id = $this->getParamsRequest()[2];
+                parse_str(file_get_contents('php://input'), $putParams);
+                $this->updateElement($putParams, $id);
+            } else {
+                http_response_code(404);
+                $this->response = json_encode([
+                    'status' => false,
+                    'message' => 'Not Found.'
+                ]);
+            }
+        }
+    }
+
     /**
      * Запрос для обновления элемента
      *
      * @param array $putParams - параметры запроса
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    public function isUpdateElementCompleted(array $putParams, int $id): bool
+    public function isUpdateElementCompleted(array $putParams, int $id): array
     {
         $query = "UPDATE authors SET
                 description = :description WHERE user_id = :user_id";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
         
-        $this->statment->bindParam(':description', $putParams['description']);
-        $this->statment->bindParam(':user_id', $id);
-        
-        $status = $this->statment->execute();
+        $statement->bindParam(':description', $putParams['description']);
+        $statement->bindParam(':user_id', $id);
 
-        return $status;
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2]
+        ];
+
+        return $result;
+    }
+
+    /**
+     * Обработка DELETE-запроса
+     *
+     * @return void
+     */
+    public function processingDeleteRequest(): void
+    {
+        if ($this->isAdmin() === true) {
+            $this->deleteElement();
+        }
     }
 
     /**
@@ -165,17 +255,21 @@ class Author extends AbstractTable
      *
      * @param int $id
      *
-     * @return bool
+     * @return array
      */
-    public function isDeleteElementCompleted(int $id): bool
+    public function isDeleteElementCompleted(int $id): array
     {
         $query = "DELETE FROM authors WHERE user_id = :user_id";
-        $this->statment = $this->pdo->prepare($query);
+        $statement = $this->pdo->prepare($query);
 
-        $this->statment->bindParam(':user_id', $id);
+        $statement->bindParam(':user_id', $id);
 
-        $status = $this->statment->execute();
+        $result = [
+            'status' => $statement->execute(),
+            'errorInfo' => $statement->errorInfo()[2],
+            'rowCount' => $statement->rowCount()
+        ];
 
-        return $status;
+        return $result;
     }
 }

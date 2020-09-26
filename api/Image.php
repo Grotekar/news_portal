@@ -10,7 +10,7 @@ use Psr\Log\LoggerInterface;
 /**
  * Класс подготавливает SQL-запросы.
  */
-class Comment extends AbstractTable
+class Image extends AbstractTable
 {
     protected PDO $pdo;
     protected LoggerInterface $logger;
@@ -25,24 +25,22 @@ class Comment extends AbstractTable
     }
 
     /**
-     * Подготовка данных перед передачей
+     * Подготовка данных перед выдачей
      *
      * @return void
      */
     public function processingGetRequest(): void
     {
-        // Получение данных
         $this->isGetRequestSuccess();
     }
-
     /**
-     * Запрос для получения всех элементов (все комментарии новости)
+     * Запрос для получения всех элементов
      *
      * @return array
      */
     public function isGetAllCompleted(): array
     {
-        $pagination = ' LIMIT ';
+        /*$pagination = ' LIMIT ';
         $paginationArg = '';
         $isValid = true;
         $result = [];
@@ -63,22 +61,9 @@ class Comment extends AbstractTable
                 $pagination = '';
             }
 
-            $newsId = $this->getParamsRequest()[2];
-
-            $query = "SELECT c.comment_id,
-                             c.news_id,
-                             u.firstname,
-                             u.lastname,
-                             c.created,
-                             c.text
-                    FROM comments c
-                        JOIN users u
-                            ON c.user_id = u.user_id
-                    WHERE news_id = :news_id" .
-                    $pagination . $paginationArg;
+            $query = "SELECT * FROM images" .
+                $pagination . $paginationArg;
             $statement = $this->pdo->prepare($query);
-
-            $statement->bindParam(':news_id', $newsId);
 
             $result = [
                 'status' => $statement->execute(),
@@ -96,11 +81,11 @@ class Comment extends AbstractTable
             ];
 
             return $result;
-        }
+        }*/
     }
 
     /**
-     * Запрос для получения элемента (получение комментариев новости)
+     * Запрос для получения элемента +
      *
      * @param int $id
      *
@@ -108,23 +93,11 @@ class Comment extends AbstractTable
      */
     public function isGetElementCompleted(int $id): array
     {
-        $newsId = $this->getParamsRequest()[2];
-
-        $query = "SELECT c.comment_id,
-                         c.news_id,
-                         u.firstname,
-                         u.lastname,
-                         c.created,
-                         c.text
-                FROM comments c
-                    JOIN users u
-                        ON c.user_id = u.user_id
-                WHERE news_id = (:news_id) AND comment_id = (:comment_id)";
+        $query = "SELECT * FROM images WHERE image_id=(:image_id)";
         $statement = $this->pdo->prepare($query);
-
-        $statement->bindParam(":news_id", $newsId);
-        $statement->bindParam(":comment_id", $id);
-
+        
+        $statement->bindParam(":image_id", $id);
+        
         $result = [
             'status' => $statement->execute(),
             'errorInfo' => $statement->errorInfo()[2],
@@ -142,9 +115,7 @@ class Comment extends AbstractTable
      */
     protected function isExistsParamsInArray(array $params): bool
     {
-        if (
-            array_key_exists('text', $params)
-        ) {
+        if (array_key_exists('name', $params)) {
             return true;
         } else {
             return false;
@@ -160,15 +131,11 @@ class Comment extends AbstractTable
      */
     public function isCreateElementCompleted(array $postParams): array
     {
-        $newsId = $this->getParamsRequest()[2];
-
-        $query = "INSERT INTO comments (news_id, user_id, text) 
-                VALUES (:news_id, :user_id, :text)";
+        $query = "INSERT INTO images (name) 
+                VALUES (:name)";
         $statement = $this->pdo->prepare($query);
 
-        $statement->bindParam(':news_id', $newsId);
-        $statement->bindParam(':user_id', $_SERVER['PHP_AUTH_USER']);
-        $statement->bindParam(':text', $postParams['text']);
+        $statement->bindParam(':name', $postParams['name']);
 
         $result = [
             'status' => $statement->execute(),
@@ -179,7 +146,6 @@ class Comment extends AbstractTable
         return $result;
     }
 
-    
     /**
      * Запрос для обновления элемента
      *
@@ -190,22 +156,20 @@ class Comment extends AbstractTable
      */
     public function isUpdateElementCompleted(array $putParams, int $id): array
     {
-        $query = "UPDATE comments SET
-                news_id = :news_id, user_id = :user_id, text = :text
-                WHERE comment_id = :comment_id";
+        /*$query = "UPDATE images SET
+            name = :name
+            WHERE image_id = :image_id";
         $statement = $this->pdo->prepare($query);
-        
-        $statement->bindParam(':news_id', $putParams['news_id']);
-        $statement->bindParam(':user_id', $putParams['user_id']);
-        $statement->bindParam(':text', $putParams['text']);
-        $statement->bindParam(':comment_id', $id);
+
+        $statement->bindParam(':name', $putParams['name']);
+        $statement->bindParam(':image_id', $id);
 
         $result = [
             'status' => $statement->execute(),
             'errorInfo' => $statement->errorInfo()[2]
         ];
 
-        return $result;
+        return $result;*/
     }
 
     /**
@@ -217,9 +181,10 @@ class Comment extends AbstractTable
      */
     public function isDeleteElementCompleted(int $id): array
     {
-        $query = "DELETE FROM comments WHERE comment_id = :comment_id";
+        /*$query = "DELETE FRimages WHERE image_id = :image_id";
         $statement = $this->pdo->prepare($query);
-        $statement->bindParam(':comment_id', $id);
+
+        $statement->bindParam(':image_id', $id);
 
         $result = [
             'status' => $statement->execute(),
@@ -227,6 +192,6 @@ class Comment extends AbstractTable
             'rowCount' => $statement->rowCount()
         ];
 
-        return $result;
+        return $result;*/
     }
 }
