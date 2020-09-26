@@ -4,12 +4,12 @@ namespace PHPUnit\Framework;
 
 use PDO;
 use Models\Database as Database;
-use Api\User as User;
+use Api\Tag as Tag;
 use PHPUnit\Framework\TestCase as TestCase;
 
-class UserTest extends TestCase
+class TagTest extends TestCase
 {
-    protected User $users;
+    protected Tag $tags;
     protected PDO $pdo;
 
     public function setUp(): void
@@ -18,57 +18,53 @@ class UserTest extends TestCase
         $database = new Database();
         $this->pdo = $database->getConnect();
 
-        $this->users = new User($this->pdo);
+        $this->tags = new Tag($this->pdo);
     }
 
     public function testIsGetAllCompleted(): void
     {
-        $this->assertTrue($this->users->isGetAllCompleted()['status']);
+        $this->assertTrue($this->tags->isGetAllCompleted()['status']);
     }
 
     public function testIsGetAllCompletedWithValidPagination(): void
     {
         $_GET['pagination'] = '[1,4]';
-        $this->assertTrue($this->users->isGetAllCompleted()['status']);
+        $this->assertTrue($this->tags->isGetAllCompleted()['status']);
         unset($_GET['pagination']);
     }
 
     public function testIsGetAllCompletedWithNoValidPagination(): void
     {
         $_GET['pagination'] = '[1,4a]';
-        $this->assertFalse($this->users->isGetAllCompleted()['status']);
+        $this->assertFalse($this->tags->isGetAllCompleted()['status']);
         unset($_GET['pagination']);
     }
 
     public function testIsGetElementCompleted(): void
     {
-        $this->assertTrue($this->users->isGetElementCompleted(1)['status']);
+        $this->assertTrue($this->tags->isGetElementCompleted(1)['status']);
     }
     
     public function testIsCreateElementCompleted()
     {
-        $postParams['firstname'] = 'testUser';
-        $postParams['lastname'] = 'testUser';
-        $postParams['avatar'] = '12313';
+        $postParams['name'] = 'testTag';
         
-        $this->assertTrue($this->users->isCreateElementCompleted($postParams)['status']);
+        $this->assertTrue($this->tags->isCreateElementCompleted($postParams)['status']);
     }
 
     public function testIsUpdateElementCompleted()
     {
-        $putParams['firstname'] = 'testUser121212';
-        $putParams['lastname'] = 'testUse121212r';
-        $putParams['avatar'] = '123132222222';
+        $putParams['name'] = 'testTag121212';
 
         $id = $this->pdo->lastInsertId();
         
-        $this->assertTrue($this->users->isUpdateElementCompleted($putParams, $id)['status']);
+        $this->assertTrue($this->tags->isUpdateElementCompleted($putParams, $id)['status']);
     }
 
     public function testIsDeleteElementCompleted()
     {
         $id = $this->pdo->lastInsertId();
 
-        $this->assertTrue($this->users->isDeleteElementCompleted($id)['status']);
+        $this->assertTrue($this->tags->isDeleteElementCompleted($id)['status']);
     }
 }

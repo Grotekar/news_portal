@@ -1,60 +1,165 @@
 <?php
 
 namespace PHPUnit\Framework;
-namespace Models;
-namespace Api;
 
 use PDO;
 use Models\Database as Database;
+use Api\News as News;
 use PHPUnit\Framework\TestCase as TestCase;
 
 class NewsTest extends TestCase
 {
-    protected $news;
+    protected News $news;
+    protected PDO $pdo;
 
     public function setUp(): void
     {
         $database = new Database();
-        $pdo = $database->getConnect();
+        $this->pdo = $database->getConnect();
 
-        $this->news = new News($pdo);
+        $this->news = new News($this->pdo);
     }
 
-    public function testIsGetAllComplited(): void
+    public function testIsGetAllCompleted(): void
     {
-        $this->assertTrue($this->news->isGetAllComplited());
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
     }
 
-    public function testIsGetElementComplited(): void
+    public function testIsGetAllCompletedWithValidPagination(): void
     {
-        $this->assertTrue($this->news->isGetElementComplited(1));
+        $_GET['pagination'] = '[1,4]';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        unset($_GET['pagination']);
     }
-    
+
+    public function testIsGetAllCompletedWithNoValidPagination(): void
+    {
+        $_GET['pagination'] = '[1,4a]';
+        $this->assertFalse($this->news->isGetAllCompleted()['status']);
+        unset($_GET['pagination']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidFilterCreated(): void
+    {
+        $_GET['created'] = '20300-09-02';
+        $this->assertFalse($this->news->isGetAllCompleted()['status']);
+        unset($_GET['created']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidFilterCreatedBefore(): void
+    {
+        $_GET['created__before'] = '2030-09-020';
+        $this->assertFalse($this->news->isGetAllCompleted()['status']);
+        unset($_GET['created__before']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidFilterCreatedAfter(): void
+    {
+        $_GET['created__after'] = '2030-090-02';
+        $this->assertFalse($this->news->isGetAllCompleted()['status']);
+        unset($_GET['created__after']);
+    }
+
+    public function testIsGetAllCompletedWithValidFilterFirstname(): void
+    {
+        $_GET['firstname'] = 'adfsf';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        unset($_GET['firstname']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidFilterCategoryId(): void
+    {
+        $_GET['category_id'] = '1000';
+        $this->assertEquals(0, $this->news->isGetAllCompleted()['rowCount']);
+        unset($_GET['category_id']);
+    }
+
+    public function testIsGetAllCompletedWithValidFilterTagId(): void
+    {
+        $_GET['tag_id'] = '1';
+        $this->assertNotEquals(0, $this->news->isGetAllCompleted()['rowCount']);
+        unset($_GET['tag_id']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidFilterTagId(): void
+    {
+        $_GET['tag_id'] = '1000';
+        $this->assertEquals(0, $this->news->isGetAllCompleted()['rowCount']);
+        unset($_GET['tag_id']);
+    }
+
+    public function testIsGetAllCompletedWithValidFilterTagIn(): void
+    {
+        $_GET['tag__in'] = '[1,2]';
+        $this->assertNotEquals(0, $this->news->isGetAllCompleted()['rowCount']);
+        unset($_GET['tag__in']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidFilterTagIn(): void
+    {
+        $_GET['tag__in'] = '[600,1000]';
+        $this->assertEquals(0, $this->news->isGetAllCompleted()['rowCount']);
+        unset($_GET['tag__in']);
+    }
+
+    public function testIsGetAllCompletedWithValidFilterTagAll(): void
+    {
+        $_GET['tag__all'] = '[1,2]';
+        $this->assertNotEquals(0, $this->news->isGetAllCompleted()['rowCount']);
+        unset($_GET['tag__all']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidFilterTagAll(): void
+    {
+        $_GET['tag__all'] = '[600,1000]';
+        $this->assertEquals(0, $this->news->isGetAllCompleted()['rowCount']);
+        unset($_GET['tag__all']);
+    }
+
+
+    public function testIsGetAllCompletedWithValidSort(): void
+    {
+        $_GET['sort'] = 'created_asc';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        $_GET['sort'] = 'created_desc';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        $_GET['sort'] = 'firstname';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        $_GET['sort'] = 'category';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        $_GET['sort'] = 'images_asc';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        $_GET['sort'] = 'images_desc';
+        $this->assertTrue($this->news->isGetAllCompleted()['status']);
+        unset($_GET['sort']);
+    }
+
+    public function testIsGetAllCompletedWithNoValidSort(): void
+    {
+        $_GET['sort'] = 'asdasd';
+        $this->assertFalse($this->news->isGetAllCompleted()['status']);
+        unset($_GET['sort']);
+    }
+
+    public function testIsGetElementCompleted(): void
+    {
+        $this->assertTrue($this->news->isGetElementCompleted(1)['status']);
+    }
+
     public function testIsCreateElementCompleted()
     {
-        $postParams['article'] = 'News!!!';
-        $postParams['author_id'] = 1;
-        $postParams['category_id'] = 1;
-        $postParams['content'] = 'Content';
-        $postParams['main_image'] = '1233142';
-        
-        $this->assertTrue($this->news->isCreateElementCompleted($postParams));
+        $postParams['article'] = 'Новость';
+        $postParams['category_id'] = '1';
+        $postParams['content'] = 'asdfsdfgdfgdsgffdsgdfg';
+        $postParams['main_image'] = 'sgdgldfkgl;dflg;k';
+
+        $this->assertFalse($this->news->isCreateElementCompleted($postParams)['status']);
     }
 
-    public function testIsUpdateElementCompleted()
+    public function testIsDeleteElementCompleted()
     {
-        $putParams['article'] = 'Change1';
-        $putParams['author_id'] = 3;
-        $putParams['category_id'] = 2;
-        $putParams['content'] = 'Content1';
-        $putParams['main_image'] = 12345;
-        $id = 8;
-        
-        $this->assertTrue($this->news->isUpdateElementCompleted($id, $putParams));
-    }
+        $id = 1;
 
-    public function testIsDeleteteElementCompleted()
-    {
-        $this->assertTrue($this->news->isDeleteteElementCompleted(8));
+        $this->assertFalse($this->news->isDeleteElementCompleted($id)['status']);
     }
 }
